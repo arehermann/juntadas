@@ -39,13 +39,23 @@ else
   read -rs TOKEN < /dev/tty
   echo
   umask 077
-  printf 'GITHUB_TOKEN=%s\nGITHUB_REPO=%s\nPUERTO=8787\n' "$TOKEN" "$REPO" > "$CONF"
+  printf 'GITHUB_TOKEN=%s\nGITHUB_REPO=%s\n' "$TOKEN" "$REPO" > "$CONF"
   chmod 600 "$CONF"
 fi
 if ! grep -q '^BACKUP_REPO=' "$CONF"; then
   printf 'BACKUP_REPO=%s/juntadas-datos\n' "${REPO%%/*}" >> "$CONF"
   echo "Las copias de los datos se van a subir al repo PRIVADO ${REPO%%/*}/juntadas-datos."
 fi
+
+# Puerto: el guardado en la config, o el primero libre desde 8797 (otro programa puede usar 8787)
+PORT="$(grep '^PUERTO=' "$CONF" | cut -d= -f2)"
+port_busy(){ ss -ltn "sport = :$1" 2>/dev/null | grep -q LISTEN; }
+if [ -z "$PORT" ] || { port_busy "$PORT" && ! systemctl is-active --quiet juntadas; }; then
+  PORT=8797
+  while port_busy "$PORT"; do PORT=$((PORT+1)); done
+  sed -i '/^PUERTO=/d' "$CONF"; echo "PUERTO=$PORT" >> "$CONF"
+fi
+echo "Juntadas va a usar el puerto $PORT."
 
 echo "== 4/4  Dejándolo funcionando siempre (también al reiniciar) =="
 sudo tee /etc/systemd/system/juntadas.service >/dev/null <<EOF
@@ -55,7 +65,7 @@ After=network.target
 
 [Service]
 User=$USER_NAME
-ExecStart=/usr/bin/python3 $DIR/juntadas_server.py --port 8787 --data $HOME/juntadas-datos/datos.json
+ExecStart=/usr/bin/python3 $DIR/juntadas_server.py --port $PORT --data $HOME/juntadas-datos/datos.json
 Restart=always
 RestartSec=5
 
@@ -79,6 +89,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+SINCE="$(date "+%Y-%m-%d %H:%M:%S")"
 sudo systemctl daemon-reload
 sudo systemctl enable --now juntadas.service juntadas-tunel.service
 sudo systemctl restart juntadas.service juntadas-tunel.service
@@ -86,13 +97,15 @@ sudo systemctl restart juntadas.service juntadas-tunel.service
 echo
 echo "Esperando que el túnel arranque..."
 for i in $(seq 1 30); do
-  URL="$(sudo journalctl -u juntadas-tunel -n 200 --no-pager 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || true)"
+  URL="$(sudo journalctl -u juntadas-tunel --since "$SINCE" --no-pager 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || true)"
   [ -n "$URL" ] && break
   sleep 2
 done
 if [ -n "${URL:-}" ]; then
   echo "Listo. La Raspberry está en: $URL"
-  if curl -fsS "$URL/api/health" >/dev/null 2>&1; then echo "Y responde bien."; fi
+  sleep 2
+  if curl -fsS "http://127.0.0.1:$PORT/api/health" | grep -q '"ok"'; then echo "El servidor responde bien."
+  else echo "OJO: el servidor no responde. Mirá:  journalctl -u juntadas -n 30"; fi
   echo "La página: https://${REPO%%/*}.github.io/${REPO##*/}/"
 else
   echo "El túnel todavía no dio su dirección. Mirá qué pasa con:  journalctl -u juntadas-tunel -f"
