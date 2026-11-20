@@ -14,6 +14,7 @@ echo "== 1/4  Bajando los archivos de Juntadas =="
 mkdir -p "$DIR"
 curl -fsSL "$RAW/juntadas_server.py" -o "$DIR/juntadas_server.py"
 curl -fsSL "$RAW/tunel.py" -o "$DIR/tunel.py"
+curl -fsSL "$RAW/respaldo.py" -o "$DIR/respaldo.py"
 
 echo "== 2/4  Instalando cloudflared (el túnel) =="
 if ! command -v cloudflared >/dev/null 2>&1; then
@@ -40,6 +41,10 @@ else
   umask 077
   printf 'GITHUB_TOKEN=%s\nGITHUB_REPO=%s\nPUERTO=8787\n' "$TOKEN" "$REPO" > "$CONF"
   chmod 600 "$CONF"
+fi
+if ! grep -q '^BACKUP_REPO=' "$CONF"; then
+  printf 'BACKUP_REPO=%s/juntadas-datos\n' "${REPO%%/*}" >> "$CONF"
+  echo "Las copias de los datos se van a subir al repo PRIVADO ${REPO%%/*}/juntadas-datos."
 fi
 
 echo "== 4/4  Dejándolo funcionando siempre (también al reiniciar) =="
