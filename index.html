@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0E1B">
+<meta name="description" content="Coordiná juntadas con tus amigas: disponibilidad, fecha y gastos.">
+<title>Juntadas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0E1B'/%3E%3Crect x='6' y='8' width='20' height='18' rx='3' fill='none' stroke='%237FA9D6' stroke-width='2.5'/%3E%3Crect x='10' y='14' width='5' height='4' fill='%23E3B76B'/%3E%3Crect x='17' y='14' width='5' height='4' fill='%23B3A1DB'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg0:#0A0E1B;--card0:#0E1324;--sheet0:#0B1022;--field:#0E1430;
+  --ink:#E9EEFF;--muted:#8E97B8;--line:rgba(140,155,200,.22);
+  --cy:#7FA9D6;--pk:#B3A1DB;--gr:#E3B76B;--gr-ink:#241A06;
+  --heat-lo:#161D36;--heat-mid:#4A6A99;--heat-hi:#B3A1DB;--empty:rgba(255,255,255,.07);
+  --display:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;--num:'Chakra Petch','Outfit',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--ink);height:100%}
+body{font-family:var(--display);font-size:15px;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.app{position:relative;min-height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;
+  background:linear-gradient(rgba(120,135,190,.12) 1px,transparent 1px) 0 0/34px 34px,linear-gradient(90deg,rgba(120,135,190,.12) 1px,transparent 1px) 0 0/34px 34px,var(--bg0)}
+@media (min-width:560px){.app{border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+.top{padding:calc(18px + env(safe-area-inset-top,0px)) 16px 8px;display:flex;align-items:center;gap:10px;min-height:58px}
+.top .ttl{flex:1;min-width:0}
+.top h2{margin:0;font-size:1.45rem;line-height:1.1;font-weight:700;letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
+.top small{display:block;color:var(--muted);font-size:.82rem;margin-top:3px}
+.brand{font-family:var(--num);font-weight:700;font-size:.85rem;letter-spacing:.06em;color:var(--pk)}
+.iconbtn{width:40px;height:40px;flex:none;display:grid;place-items:center;border:1.5px solid var(--cy);color:var(--cy);background:transparent;border-radius:50%}
+.iconbtn svg{width:20px;height:20px}
+.body{flex:1;padding:6px 16px calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.nav{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;display:flex;gap:4px;padding:8px 14px calc(12px + env(safe-area-inset-bottom,0px));z-index:5;background:rgba(8,11,23,.94);border-top:1px solid var(--line)}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border:0;background:transparent;font-size:.74rem;font-weight:600;color:var(--muted);border-radius:16px}
+.nav svg{width:21px;height:21px}
+.nav button[aria-current="page"]{color:var(--gr);background:rgba(227,183,107,.12)}
+.card{padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--card0);border:1.5px solid var(--line);border-radius:22px;min-width:0}
+.card.hi{border-color:var(--cy)}
+.card.vote{border-color:var(--pk)}
+.card.ok{border-color:var(--gr)}
+button.card{text-align:left;width:100%;font:inherit;color:inherit;cursor:pointer}
+.row{display:flex;align-items:center;gap:10px;min-width:0}
+.between{justify-content:space-between}
+.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.lbl{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cy);font-weight:700;font-family:var(--num)}
+.lbl.st-vote{color:var(--pk)}.lbl.st-ok{color:var(--gr)}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+h3{margin:0;font-size:1.04rem;font-weight:600;overflow-wrap:anywhere}
+p{margin:0;line-height:1.5}
+.big{font-family:var(--display);font-size:1.45rem;font-weight:700;line-height:1.1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;font-weight:700;border:0;border-radius:999px;background:var(--cy);color:#0A1322;text-decoration:none;text-align:center}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn svg,.chip svg,.opt svg{width:18px;height:18px;flex:none}
+.btn.block{width:100%}
+.btn.ghost{background:transparent;border:1.5px solid var(--cy);color:var(--cy)}
+.btn.alt{background:var(--gr);color:var(--gr-ink)}
+.btn.danger{background:transparent;border:1.5px solid var(--line);color:var(--muted)}
+.btns{display:flex;gap:8px}.btns .btn{flex:1}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:700;flex:none;color:#141022;border:1.5px solid var(--bg0)}
+.avs{display:flex;flex-wrap:wrap;row-gap:4px}.avs .av{margin-left:-8px}.avs .av:first-child{margin-left:0}
+.list{display:flex;flex-direction:column}
+.li{display:flex;align-items:center;gap:12px;padding:11px 0;min-width:0}
+.li+.li{border-top:1px dashed var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:7px 12px;font-size:.84rem;font-weight:700;border:1.5px solid var(--cy);color:var(--cy);background:transparent;border-radius:999px}
+.chip[aria-pressed="true"]{background:var(--pk);border-color:var(--pk);color:#1A1430}
+.seg{display:flex;padding:4px;gap:4px;background:var(--card0);border:1px solid var(--line);border-radius:16px}
+.seg button{flex:1;padding:9px 6px;border:0;background:transparent;font-weight:700;font-size:.86rem;display:flex;gap:6px;align-items:center;justify-content:center;border-radius:12px;color:var(--muted)}
+.seg svg{width:16px;height:16px}
+.seg button[aria-pressed="true"]{background:rgba(227,183,107,.12);color:var(--gr);outline:1.5px solid var(--gr);outline-offset:-1.5px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.field input,.field select{width:100%;padding:11px 12px;border:1px solid var(--line);background:var(--field);border-radius:12px;min-width:0;font-size:16px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--cy)}
+.field select option{background:var(--sheet0)}
+.fields{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px}
+.fields2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.x{border:0;background:transparent;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;color:var(--pk);flex:none}
+.x svg{width:16px;height:16px}
+.linkbtn{border:0;background:transparent;color:var(--cy);font-weight:600;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+
+/* grilla */
+.gridwrap{overflow-x:auto;margin:0 -4px;padding:0 4px 2px}
+.grid{display:grid;grid-template-columns:34px repeat(var(--cols),minmax(34px,1fr));gap:3px;user-select:none;-webkit-user-select:none}
+.grid.mine{touch-action:none}
+.gh{text-align:center;font-size:.7rem;line-height:1.1;padding-bottom:4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.gh b{display:block;font-size:.95rem;color:var(--ink);font-family:var(--num);font-weight:700;letter-spacing:0}
+.gt{font-size:.68rem;color:var(--muted);text-align:right;padding-right:4px;line-height:26px;font-family:var(--num)}
+.c{height:26px;border:0;padding:0;position:relative;background:var(--heat-lo);border-radius:4px}
+.grid.mine .c{background:var(--empty);cursor:pointer}
+.grid.mine .c.on{background:var(--gr)}
+.grid.heat .c.sel{outline:2.5px solid var(--gr);outline-offset:1px;z-index:1}
+.grid.heat .c.full::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:#0E1324;left:50%;top:50%;transform:translate(-50%,-50%)}
+.legend{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--muted)}
+.legend i{flex:1;height:8px;border-radius:8px;background:linear-gradient(90deg,var(--heat-lo),var(--heat-mid),var(--heat-hi))}
+
+.sheet-bg{position:fixed;inset:0;background:rgba(5,7,14,.6);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:520px;padding:18px 16px calc(26px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;max-height:90%;overflow:auto;background:var(--sheet0);border:1.5px solid var(--line);border-bottom:0;border-radius:28px 28px 0 0}
+.grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 4px;flex:none}
+.opt{display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--line);text-decoration:none;color:inherit;background:transparent;width:100%;text-align:left;border-radius:18px}
+.opt .ic{width:36px;height:36px;display:grid;place-items:center;flex:none;font-weight:700;border-radius:12px;border:1.5px solid var(--cy);color:var(--cy)}
+.opt b{display:block}.opt small{color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:30;padding:10px 14px;font-size:.88rem;font-weight:600;max-width:86%;text-align:center;background:#1A2140;color:var(--ink);border-radius:14px;border:1px solid var(--line)}
+.copybox{display:flex;gap:8px;align-items:center;padding:10px 12px;border:1px dashed var(--cy);color:var(--cy);border-radius:12px;font-family:var(--num);font-size:.8rem;word-break:break-all}
+.banner{margin:0 16px;padding:10px 12px;border:1.5px solid var(--pk);border-radius:14px;font-size:.86rem;color:var(--ink);background:var(--card0)}
+.center{min-height:70vh;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.spin{width:26px;height:26px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--cy);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}.toast{animation:fade .2s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.4}}@keyframes fade{from{opacity:0}}}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="body"><div class="center"><div class="spin"></div></div></div></div>
+<script>
+// ===== Configuración =====
+const REPO='arehermann/juntadas';           // repo de GitHub donde la Raspberry anota su dirección
+const POLL_MS=15000;                         // cada cuánto se actualiza solo
+
+// ===== Utilidades =====
+const $app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const t=h=>pad(h%24)+':00';
+const dObj=iso=>new Date(iso+'T12:00:00Z');
+const isoOf=d=>d.toISOString().slice(0,10);
+const addDays=(iso,n)=>{const d=dObj(iso);d.setUTCDate(d.getUTCDate()+n);return isoOf(d)};
+const todayIso=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const fmtD=(iso,o)=>dObj(iso).toLocaleDateString('es-AR',{timeZone:'UTC',...o}).replace('.','');
+const wd=iso=>fmtD(iso,{weekday:'short'});
+const dayLbl=iso=>wd(iso)+' '+dObj(iso).getUTCDate();
+const dayLong=iso=>dayLbl(iso)+' '+fmtD(iso,{month:'short'});
+const money=n=>'$ '+Math.round(n).toLocaleString('es-AR');
+const daysOf=e=>{const out=[];let d=e.start;while(d<=e.end&&out.length<32){out.push(d);d=addDays(d,1)}return out};
+const hoursOf=e=>{const out=[];for(let h=e.hourFrom;h<e.hourTo;h++)out.push(h);return out};
+const key=(d,h)=>d+'T'+pad(h);
+function rangeLbl(e){const a=dObj(e.start),b=dObj(e.end);
+  if(e.start===e.end)return dayLong(e.start);
+  const sameM=a.getUTCMonth()===b.getUTCMonth();
+  return 'Del '+dayLbl(e.start)+(sameM?'':' '+fmtD(e.start,{month:'short'}))+' al '+dayLbl(e.end)+' '+fmtD(e.end,{month:'short'})}
+
+const I={
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  money:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M19 8v6M16 11h6"/></svg>',
+  hand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a2 2 0 0 1 4 0v6M13 10V8a2 2 0 0 1 4 0v5a7 7 0 0 1-7 7h-.5A5.5 5.5 0 0 1 5 16.5L4 13a2 2 0 0 1 3.5-1.7L9 13"/></svg>',
+  pen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>'
+};
+
+// ===== Guardado local (solo comodidad: qué grupos abriste y quién sos en cada uno) =====
+const LS='juntadas:v1';
+function lsGet(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch{return{}}}
+function lsSet(v){try{localStorage.setItem(LS,JSON.stringify(v))}catch{}}
+const store=Object.assign({groups:{}},lsGet());
+store.groups=store.groups||{};
+const saveStore=()=>lsSet(store);
+
+// ===== Estado =====
+const S={api:null,status:'cargando',gid:null,group:null,eid:null,screen:'inicio',mode:'tactil',
+  sel:null,sheet:null,toast:null,busy:false,offline:false,
+  form:{day:null,from:null,to:null},gOpen:false,gf:{desc:'',amt:'',payer:null,among:null},
+  nf:null,cf:null,delArm:null};
+
+const me=()=>S.gid&&store.groups[S.gid]?store.groups[S.gid].mid:null;
+const members=()=>S.group?S.group.members:[];
+const mem=id=>members().find(m=>m.id===id)||{id,name:'?',color:'#666'};
+const ev=()=>S.group&&S.group.events.find(e=>e.id===S.eid)||null;
+const nameOf=id=>id===me()?'Vos':mem(id).name;
+const av=id=>{const m=mem(id);return `<span class="av" style="background:${esc(m.color)}" title="${esc(m.name)}">${esc((m.name[0]||'?').toUpperCase())}</span>`};
+
+// ===== Conexión con la Raspberry =====
+async function healthy(url){
+  try{const c=new AbortController();const tm=setTimeout(()=>c.abort(),7000);
+    const r=await fetch(url.replace(/\/$/,'')+'/api/health',{signal:c.signal,cache:'no-store'});clearTimeout(tm);return r.ok}catch{return false}}
+async function urlFromGitHub(){
+  const tries=[
+    ()=>fetch('https://api.github.com/repos/'+REPO+'/contents/backend.json?ref=main',{headers:{Accept:'application/vnd.github.raw+json'},cache:'no-store'}),
+    ()=>fetch('https://raw.githubusercontent.com/'+REPO+'/main/backend.json?t='+Date.now(),{cache:'no-store'}),
+    ()=>fetch('backend.json?t='+Date.now(),{cache:'no-store'})];
+  for(const f of tries){try{const r=await f();if(r.ok){const j=await r.json();if(j&&j.url)return j.url}}catch{}}
+  return null}
+async function findApi(){
+  const q=new URLSearchParams(location.search).get('api');
+  if(q){if(await healthy(q))return q.replace(/\/$/,'')}
+  if(store.api&&await healthy(store.api))return store.api;
+  const u=await urlFromGitHub();
+  if(u&&await healthy(u)){store.api=u.replace(/\/$/,'');saveStore();return store.api}
+  return null}
+
+async function api(method,path,body){
+  if(!S.api)throw new Error('Sin conexión con la Raspberry');
+  let r;
+  try{r=await fetch(S.api+'/api'+path,{method,cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined})}
+  catch(err){S.offline=true;reconnect();throw new Error('No hay conexión con la Raspberry. Probá de nuevo en un ratito.')}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||('Error '+r.status));
+  S.offline=false;
+  if(j.group&&j.group.id===S.gid)S.group=j.group;
+  return j}
+
+let reconnecting=false;
+async function reconnect(){if(reconnecting)return;reconnecting=true;
+  const u=await findApi();reconnecting=false;
+  if(u){S.api=u;S.offline=false;await refresh(true)}else render()}
+
+// ===== Navegación por link =====
+function gidFromUrl(){const m=location.hash.match(/g=([A-Za-z0-9]+)/);return m?m[1]:null}
+const groupLink=gid=>location.origin+location.pathname+'#g='+gid;
+
+async function openGroup(gid){
+  S.gid=gid;S.group=null;S.sel=null;S.sheet=null;S.screen='inicio';
+  if(location.hash!=='#g='+gid)history.replaceState(null,'','#g='+gid);
+  try{const j=await api('GET','/groups/'+gid);S.group=j.group;
+    const k=store.groups[gid];
+    if(k){k.name=j.group.name;if(!j.group.members.some(m=>m.id===k.mid))delete k.mid;saveStore()}
+    pickEvent();S.status=me()?'ok':'unirse'}
+  catch(err){S.status=/No existe/.test(err.message)?'nogrupo':'error';S.err=err.message}
+  render()}
+
+function pickEvent(){const es=S.group?S.group.events:[];if(!es.find(e=>e.id===S.eid))S.eid=es[0]?es[0].id:null}
+
+async function refresh(force){
+  if(!S.gid||!S.api||document.hidden)return;
+  try{const old=S.group&&S.group.updated;const j=await api('GET','/groups/'+S.gid);
+    if(force||j.group.updated!==old){pickEvent();if(!busyUi())render()}}catch{render()}}
+const busyUi=()=>dragging||(document.activeElement&&/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName));
+
+// ===== Cálculos =====
+function availSets(e){const o={};members().forEach(m=>o[m.id]=new Set((e.avail&&e.avail[m.id])||[]));return o}
+function who(e,sets,k){return members().filter(m=>sets[m.id].has(k)).map(m=>m.id)}
+function best(e){const sets=availSets(e);let b={c:-1};
+  daysOf(e).forEach(d=>{const hs=hoursOf(e);let i=0;while(i<hs.length){const c=who(e,sets,key(d,hs[i])).length;let j=i;
+    while(j+1<hs.length&&who(e,sets,key(d,hs[j+1])).length===c)j++;
+    if(c>b.c||(c===b.c&&j-i>b.e-b.s))b={c,day:d,s:i,e:j,from:hs[i],to:hs[j]+1};i=j+1}});
+  return b}
+function myRuns(e,mine){const out=[];daysOf(e).forEach(d=>{let st=null;for(let h=e.hourFrom;h<=e.hourTo;h++){const on=h<e.hourTo&&mine.has(key(d,h));
+  if(on&&st===null)st=h;if(!on&&st!==null){out.push({day:d,from:st,to:h});st=null}}});return out}
+function responded(e){return members().filter(m=>(e.avail[m.id]||[]).length).length}
+function balances(e){const b={};members().forEach(m=>b[m.id]=0);
+  e.expenses.forEach(x=>{if(b[x.payer]===undefined)b[x.payer]=0;b[x.payer]+=x.amount;const sh=x.amount/x.among.length;x.among.forEach(m=>{b[m]=(b[m]||0)-sh})});return b}
+function settle(b){const d=[],c=[];Object.keys(b).forEach(m=>{if(b[m]<-0.5)d.push([m,-b[m]]);else if(b[m]>0.5)c.push([m,b[m]])});
+  d.sort((a,z)=>z[1]-a[1]);c.sort((a,z)=>z[1]-a[1]);const out=[];let i=0,j=0;
+  while(i<d.length&&j<c.length){const v=Math.min(d[i][1],c[j][1]);out.push([d[i][0],c[j][0],v]);d[i][1]-=v;c[j][1]-=v;if(d[i][1]<0.5)i++;if(c[j][1]<0.5)j++}return out}
+
+// ===== Pantallas =====
+function topbar(title,sub,back,right){
+  return `<header class="top">${back?`<button class="iconbtn" data-act="go:${back}" aria-label="Volver">${I.back}</button>`:''}<div class="ttl">${!back?'<span class="brand">JUNTADAS</span>':''}<h2>${title}</h2>${sub?`<small>${sub}</small>`:''}</div>${right||''}</header>`}
+function nav(){const tabs=[['inicio','Juntadas',I.home],['dispo','Mi disponibilidad',I.cal],['gastos','Gastos',I.money]];
+  const cur=S.screen==='evento'?'inicio':S.screen;
+  return `<nav class="nav">${tabs.map(([k,l,ic])=>`<button data-act="go:${k}" ${cur===k?'aria-current="page"':''}>${ic}<span>${l}</span></button>`).join('')}</nav>`}
+const banner=()=>S.offline?`<div class="banner">No hay conexión con la Raspberry. Puede estar apagada o reiniciándose. Los cambios no se están guardando.</div>`:'';
+
+function scrBienvenida(){const known=Object.entries(store.groups);
+  return topbar('Coordiná juntadas con tus amigas','Elegí cuándo, mandalo al calendario y dividí los gastos')+`<div class="body">
+  ${known.length?`<div class="card"><h3>Tus grupos</h3><div class="list">${known.map(([gid,g])=>`<button class="li opt" style="border:0;padding:11px 0;border-radius:0" data-act="open:${esc(gid)}"><span class="grow"><b>${esc(g.name||'Grupo')}</b></span>${I.back.replace('M15 18l-6-6 6-6','M9 18l6-6-6-6')}</button>`).join('')}</div></div>`:''}
+  <div class="card hi"><h3>Crear un grupo</h3>
+    <div class="field"><label for="n-group">Nombre del grupo</label><input id="n-group" maxlength="40" placeholder="Ej: Las de siempre" autocomplete="off"></div>
+    <div class="field"><label for="n-me">Tu nombre</label><input id="n-me" maxlength="30" placeholder="Como te conocen" autocomplete="given-name"></div>
+    <button class="btn block" data-act="creategroup">${I.plus} Crear grupo</button></div>
+  <p class="muted small">¿Te pasaron un link? Abrilo y vas a entrar directo a ese grupo.</p>
+  </div>`}
+
+function scrUnirse(){const g=S.group;
+  return topbar(esc(g.name),'Te invitaron a este grupo')+`<div class="body">
+  ${g.members.length?`<div class="card"><h3>¿Quién sos?</h3><div class="chips">${g.members.map(m=>`<button class="chip" data-act="iam:${m.id}">${esc(m.name)}</button>`).join('')}</div>
+    <p class="muted small">Si ya entraste desde otro celular, tocá tu nombre.</p></div>`:''}
+  <div class="card hi"><h3>${g.members.length?'Soy nueva en el grupo':'Entrar al grupo'}</h3>
+    <div class="field"><label for="j-name">Tu nombre</label><input id="j-name" maxlength="30" placeholder="Como te conocen" autocomplete="given-name"></div>
+    <button class="btn block" data-act="join">Entrar</button></div>
+  </div>`}
+
+function scrInicio(){const g=S.group;
+  const evs=g.events.map(e=>{const b=best(e),c=e.confirmed;
+    return `<button class="card ${c?'ok':'vote'}" data-act="ev:${e.id}">
+      <div class="row between"><h3>${esc(e.title)}</h3><span class="lbl ${c?'st-ok':'st-vote'}">${c?'Confirmada':'Votando'}</span></div>
+      <div class="muted">${c?dayLong(c.date)+' · '+t(c.from)+' a '+t(c.to):rangeLbl(e)+' · respondieron '+responded(e)+' de '+g.members.length}${e.place?' · '+esc(e.place):''}</div>
+      ${!c&&b.c>0?`<div class="row between"><div class="avs">${g.members.filter(m=>(e.avail[m.id]||[]).length).map(m=>av(m.id)).join('')}</div><span class="num muted small">Mejor: ${dayLbl(b.day)} · ${t(b.from)}</span></div>`:''}
+    </button>`}).join('');
+  return topbar('Hola, ¿cuándo nos vemos?','',null,`<button class="iconbtn" data-act="sheet:menu" aria-label="Grupos y opciones">${I.menu}</button>`)+banner()+`<div class="body">
+  <div class="card hi"><div class="row between wrap"><div class="grow"><div class="lbl">Tu grupo</div><h3 style="font-size:1.5rem;line-height:1.1">${esc(g.name)}</h3></div><div class="avs">${g.members.map(m=>av(m.id)).join('')}</div></div>
+    <div class="btns"><button class="btn ghost" data-act="sheet:invite">${I.user} Invitar</button></div></div>
+  <div class="row between"><div class="lbl">Juntadas</div><button class="chip" data-act="newev">+ Nueva</button></div>
+  ${evs||`<div class="card"><p class="muted">Todavía no hay juntadas. Creá la primera con <b>+ Nueva</b>: elegís qué días podrían ser y cada una marca cuándo puede.</p></div>`}
+  </div>`+nav()}
+
+function heatBg(c,total){const p=total?c/total:0;return p<=.5?`color-mix(in oklab,var(--heat-mid) ${Math.round(p*200)}%,var(--heat-lo))`:`color-mix(in oklab,var(--heat-hi) ${Math.round((p-.5)*200)}%,var(--heat-mid))`}
+function grid(e,kind){const days=daysOf(e),total=members().length,sets=availSets(e),mine=sets[me()]||new Set();
+  let s=`<div class="gridwrap"><div class="grid ${kind}" style="--cols:${days.length}"><div class="gh"></div>`+days.map(d=>`<div class="gh">${wd(d)}<b>${dObj(d).getUTCDate()}</b></div>`).join('');
+  hoursOf(e).forEach(h=>{s+=`<div class="gt">${h}</div>`;days.forEach(d=>{const k=key(d,h);
+    if(kind==='heat'){const c=who(e,sets,k).length;s+=`<button class="c${S.sel===k?' sel':''}${c===total&&total>1?' full':''}" data-act="cell:${k}" style="background:${heatBg(c,total)}" aria-label="${dayLbl(d)}, ${t(h)}: pueden ${c} de ${total}"></button>`}
+    else s+=`<div class="c${mine.has(k)?' on':''}" data-cell="${k}" role="checkbox" aria-checked="${mine.has(k)}" aria-label="${dayLbl(d)}, ${t(h)}"></div>`})});
+  return s+'</div></div>'}
+
+function scrEvento(){const e=ev();if(!e){S.screen='inicio';return scrInicio()}
+  const total=members().length,b=best(e),c=e.confirmed,sets=availSets(e);let info;
+  if(S.sel){const d=S.sel.slice(0,10),h=+S.sel.slice(11);const y=who(e,sets,S.sel),n=members().map(m=>m.id).filter(m=>!y.includes(m));
+    info=`<div class="row between"><b>${dayLbl(d)} · ${t(h)} a ${t(h+1)}</b><span class="num">${y.length}/${total}</span></div>
+    <div class="row wrap" style="gap:6px"><span class="muted" style="width:60px">Pueden</span>${y.map(av).join('')||'<span class="muted">nadie</span>'}</div>
+    ${n.length?`<div class="row wrap" style="gap:6px"><span class="muted" style="width:60px">No</span>${n.map(av).join('')}</div>`:''}`}
+  else info=`<span class="muted">Tocá un cuadrito para ver quién puede en ese horario.</span>`;
+  const org=e.createdBy?(e.createdBy===me()?'Organizás vos · ':'Organiza '+esc(nameOf(e.createdBy))+' · '):'';
+  const head=c?`<div class="lbl st-ok">Fecha confirmada</div><div class="big">${dayLong(c.date)} · ${t(c.from)}–${t(c.to)}</div><div class="muted">Agregala a tu calendario y avisale al grupo.</div>
+      <div class="btns"><button class="btn alt" data-act="sheet:cal">${I.cal} Agregar al calendario</button></div><button class="linkbtn" data-act="unconfirm">Volver a votar</button>`
+    :b.c>0?`<div class="lbl">Mejor momento</div><div class="big">${dayLbl(b.day)} · ${t(b.from)}–${t(b.to)}</div><div class="muted">Pueden ${b.c} de ${total}${b.c===total&&total>1?', ¡todas!':''} · respondieron ${responded(e)}</div>
+      <div class="btns"><button class="btn alt" data-act="sheet:confirm">${I.cal} Confirmar fecha</button></div>`
+    :`<div class="lbl">Todavía nadie marcó</div><p class="muted">Cargá tu disponibilidad y pasale el link al grupo para que cada una marque la suya.</p>`;
+  return topbar(esc(e.title),org+rangeLbl(e)+(e.place?' · '+esc(e.place):''),'inicio')+banner()+`<div class="body">
+  <div class="card ${c?'ok':'hi'}">${head}</div>
+  <div class="card"><div class="row between"><h3>Disponibilidad del grupo</h3><span class="lbl">${total} personas</span></div>
+    ${grid(e,'heat')}
+    <div class="legend"><span>0</span><i></i><span>${total}</span></div></div>
+  <div class="card">${info}</div>
+  <div class="btns"><button class="btn" data-act="go:dispo">${I.hand} Cargar lo mío</button><button class="btn ghost" data-act="go:gastos">${I.money} Gastos</button></div>
+  <button class="btn danger block" data-act="delev">${S.delArm===e.id?'Tocá de nuevo para borrar la juntada':'Borrar juntada'}</button>
+  </div>`+nav()}
+
+function evPicker(){const es=S.group.events;if(es.length<2)return'';
+  return `<div class="field"><label for="ev-pick">Juntada</label><select id="ev-pick" data-change="pick">${es.map(e=>`<option value="${e.id}"${e.id===S.eid?' selected':''}>${esc(e.title)}</option>`).join('')}</select></div>`}
+const noEvent=title=>topbar(title)+banner()+`<div class="body"><div class="card"><p class="muted">Primero hace falta una juntada.</p><button class="btn block" data-act="newev">${I.plus} Crear juntada</button></div></div>`+nav();
+
+function scrDispo(){const e=ev();if(!e)return noEvent('Mi disponibilidad');
+  const mine=new Set(e.avail[me()]||[]),r=myRuns(e,mine),days=daysOf(e),hs=hoursOf(e);
+  if(!days.includes(S.form.day))S.form={day:days[0],from:Math.max(e.hourFrom,Math.min(15,e.hourTo-1)),to:Math.min(e.hourTo,19)};
+  const sel=(id,opts,v)=>`<select id="${id}" data-f="${id}">${opts.map(([val,l])=>`<option value="${val}"${String(val)===String(v)?' selected':''}>${l}</option>`).join('')}</select>`;
+  const presets=[['Mañana',10,13],['Tarde',14,19],['Noche',19,24],['Todo el día',e.hourFrom,e.hourTo]].map(([l,a,b])=>[l,Math.max(a,e.hourFrom),Math.min(b,e.hourTo)]).filter(([,a,b])=>a<b);
+  const list=r.length?`<div class="list">${r.map(x=>`<div class="li"><span class="grow"><b>${dayLbl(x.day)}</b> <span class="num muted">· ${t(x.from)} a ${t(x.to)}</span></span><button class="x" data-act="delrun:${x.day}|${x.from}|${x.to}" aria-label="Borrar franja">${I.x}</button></div>`).join('')}</div>`:'<span class="muted">Todavía no marcaste horarios.</span>';
+  const body=S.mode==='tactil'
+   ?`<div class="card"><div class="muted small">Tocá o arrastrá el dedo para marcar cuándo podés. Pasá de nuevo por encima para desmarcar. Se guarda solo.</div>${grid(e,'mine')}</div>`
+   :`<div class="card"><h3>Agregar franja</h3>
+     <div class="fields"><div class="field"><label for="m-day">Día</label>${sel('m-day',days.map(d=>[d,dayLong(d)]),S.form.day)}</div>
+     <div class="field"><label for="m-from">Desde</label>${sel('m-from',hs.map(h=>[h,t(h)]),S.form.from)}</div>
+     <div class="field"><label for="m-to">Hasta</label>${sel('m-to',hs.map(h=>[h+1,t(h+1)]),S.form.to)}</div></div>
+     <div class="chips">${presets.map(([l,a,b])=>`<button class="chip" data-act="preset:${a}-${b}">${l}</button>`).join('')}</div>
+     <button class="btn block" data-act="addrange">${I.plus} Agregar</button></div>`;
+  return topbar('Mi disponibilidad',esc(e.title)+' · '+rangeLbl(e))+banner()+`<div class="body">
+  ${evPicker()}
+  <div class="seg" role="group" aria-label="Forma de carga"><button data-act="mode:tactil" aria-pressed="${S.mode==='tactil'}">${I.hand} Tocar la grilla</button><button data-act="mode:manual" aria-pressed="${S.mode==='manual'}">${I.pen} Escribir horas</button></div>
+  ${body}
+  <div class="card"><div class="row between"><h3>Tus franjas</h3>${r.length?'<button class="chip" data-act="clear">Borrar todo</button>':''}</div>${list}</div>
+  <button class="btn ghost block" data-act="ev:${e.id}">Ver cómo queda el grupo</button>
+  </div>`+nav()}
+
+function scrGastos(){const e=ev();if(!e)return noEvent('Gastos');
+  const ms=members(),b=balances(e),tr=settle(b),tot=e.expenses.reduce((a,x)=>a+x.amount,0),mine=b[me()]||0;
+  if(!S.gf.payer||!ms.some(m=>m.id===S.gf.payer))S.gf.payer=me();
+  if(!S.gf.among)S.gf.among=new Set(ms.map(m=>m.id));
+  const form=S.gOpen?`<div class="card hi"><div class="row between"><h3>Nuevo gasto</h3><button class="x" data-act="gclose" aria-label="Cerrar">${I.x}</button></div>
+    <div class="field"><label for="g-desc">¿Qué se compró?</label><input id="g-desc" data-g="desc" maxlength="60" value="${esc(S.gf.desc)}" placeholder="Ej: pan y ensalada" autocomplete="off"></div>
+    <div class="field"><label for="g-amt">Monto</label><input id="g-amt" data-g="amt" inputmode="decimal" value="${esc(S.gf.amt)}" placeholder="$ 0" autocomplete="off"></div>
+    <div class="field"><label>Pagó</label><div class="chips">${ms.map(m=>`<button class="chip" data-act="payer:${m.id}" aria-pressed="${S.gf.payer===m.id}">${esc(nameOf(m.id))}</button>`).join('')}</div></div>
+    <div class="field"><label>Se divide entre</label><div class="chips">${ms.map(m=>`<button class="chip" data-act="among:${m.id}" aria-pressed="${S.gf.among.has(m.id)}">${esc(nameOf(m.id))}</button>`).join('')}</div></div>
+    <button class="btn block" data-act="gsave"${S.busy?' disabled':''}>Guardar gasto</button></div>`
+   :`<button class="btn block" data-act="gopen">${I.plus} Agregar gasto</button>`;
+  const amongLbl=x=>x.among.length===ms.length?'todas':x.among.map(nameOf).map(esc).join(', ');
+  return topbar('Gastos',esc(e.title))+banner()+`<div class="body">
+  ${evPicker()}
+  <div class="card hi"><div class="row between"><div><div class="lbl">Total</div><div class="big num">${money(tot)}</div></div>
+   <div style="text-align:right"><div class="lbl">Tu saldo</div><div class="big num">${mine>=-0.5?'+':'−'}${money(Math.abs(mine)).slice(2)}</div></div></div>
+   <div class="muted small">${Math.abs(mine)<0.5?'Estás al día':mine>0?'Te deben '+money(mine):'Debés '+money(-mine)}${tot?' · '+money(tot/ms.length)+' por persona si se divide parejo':''}</div></div>
+  ${form}
+  <div class="card"><h3>Quién le paga a quién</h3><div class="list">${tr.map(([f,to,v])=>`<div class="li">${av(f)}<span class="grow"><b>${esc(nameOf(f))}</b> <span class="muted">le ${f===me()?'pasás':'pasa'} a</span> <b>${esc(nameOf(to))}</b></span><b class="num">${money(v)}</b></div>`).join('')||'<span class="muted">Están todas al día.</span>'}</div></div>
+  <div class="card"><h3>Gastos cargados</h3><div class="list">${e.expenses.slice().reverse().map(x=>`<div class="li">${av(x.payer)}<span class="grow"><b>${esc(x.desc)}</b><br><small class="muted">Pagó ${esc(nameOf(x.payer))} · entre ${amongLbl(x)}</small></span><b class="num">${money(x.amount)}</b><button class="x" data-act="gdel:${x.id}" aria-label="Borrar gasto">${I.x}</button></div>`).join('')||'<span class="muted">Todavía no hay gastos.</span>'}</div></div>
+  </div>`+nav()}
+
+function scrEstado(){
+  if(S.status==='cargando')return `<div class="body"><div class="center" style="align-items:center"><div class="spin"></div><span class="muted">Conectando…</span></div></div>`;
+  if(S.status==='sinapi')return topbar('No se puede conectar')+`<div class="body"><div class="card vote"><p>La app guarda los datos en una Raspberry y ahora no responde. Puede estar apagada, sin internet o reiniciándose.</p><p class="muted small">Si recién se reinició, esperá un minuto y probá de nuevo.</p><button class="btn block" data-act="retry">Probar de nuevo</button></div></div>`;
+  if(S.status==='nogrupo')return topbar('No encontramos ese grupo')+`<div class="body"><div class="card"><p>El link puede estar mal copiado o el grupo ya no existe.</p><button class="btn block" data-act="home">Ir al inicio</button></div></div>`;
+  return topbar('Algo salió mal')+`<div class="body"><div class="card"><p>${esc(S.err||'')}</p><button class="btn block" data-act="retry">Probar de nuevo</button></div></div>`}
+
+// ===== Hojas (ventanas de abajo) =====
+function sheet(){if(!S.sheet)return'';let inner='';const g=S.group;
+  if(S.sheet==='invite'){const link=groupLink(S.gid);
+    inner=`<h3>Invitar a ${esc(g.name)}</h3><p class="muted">Compartí este link. Quien lo abra entra al grupo y puede marcar su disponibilidad.</p>
+    <div class="copybox"><span class="grow">${esc(link)}</span><button class="chip" data-act="copy">Copiar</button></div>
+    ${navigator.share?`<button class="opt" data-act="share"><span class="ic">${I.share}</span><span><b>Compartir</b><small>Elegí la app</small></span></button>`:''}
+    <a class="opt" href="https://wa.me/?text=${encodeURIComponent('¡Sumate al grupo "'+g.name+'" en Juntadas! '+link)}" target="_blank" rel="noopener"><span class="ic">W</span><span><b>Mandar por WhatsApp</b><small>Al chat del grupo</small></span></a>
+    <a class="opt" href="mailto:?subject=${encodeURIComponent('Sumate a '+g.name)}&body=${encodeURIComponent('Entrá a este link para coordinar: '+link)}"><span class="ic">@</span><span><b>Mandar por mail</b><small>A una o varias personas</small></span></a>`}
+  if(S.sheet==='newev'){const f=S.nf;const hs=[];for(let h=0;h<=24;h++)hs.push(h);
+    inner=`<h3>Nueva juntada</h3>
+    <div class="field"><label for="e-title">¿Qué hacemos?</label><input id="e-title" data-n="title" maxlength="60" value="${esc(f.title)}" placeholder="Ej: Asado en lo de Caro" autocomplete="off"></div>
+    <div class="field"><label for="e-place">¿Dónde? (opcional)</label><input id="e-place" data-n="place" maxlength="80" value="${esc(f.place)}" placeholder="Ej: Casa de Caro" autocomplete="off"></div>
+    <div class="lbl">¿Qué días podría ser?</div>
+    <div class="fields2"><div class="field"><label for="e-start">Desde</label><input type="date" id="e-start" data-n="start" value="${f.start}"></div>
+      <div class="field"><label for="e-end">Hasta</label><input type="date" id="e-end" data-n="end" value="${f.end}"></div></div>
+    <div class="lbl">¿En qué horario?</div>
+    <div class="fields2"><div class="field"><label for="e-hf">Desde</label><select id="e-hf" data-n="hourFrom">${hs.slice(0,24).map(h=>`<option value="${h}"${h==f.hourFrom?' selected':''}>${t(h)}</option>`).join('')}</select></div>
+      <div class="field"><label for="e-ht">Hasta</label><select id="e-ht" data-n="hourTo">${hs.slice(1).map(h=>`<option value="${h}"${h==f.hourTo?' selected':''}>${h===24?'00:00 (medianoche)':t(h)}</option>`).join('')}</select></div></div>
+    <button class="btn block" data-act="createev"${S.busy?' disabled':''}>Crear juntada</button>`}
+  if(S.sheet==='confirm'){const e=ev(),f=S.cf,hs=hoursOf(e);
+    inner=`<h3>Confirmar fecha</h3><p class="muted">Elegí el día y el horario. Después la podés agregar al calendario.</p>
+    <div class="fields"><div class="field"><label for="c-day">Día</label><select id="c-day" data-c="date">${daysOf(e).map(d=>`<option value="${d}"${d===f.date?' selected':''}>${dayLong(d)}</option>`).join('')}</select></div>
+     <div class="field"><label for="c-from">Desde</label><select id="c-from" data-c="from">${hs.map(h=>`<option value="${h}"${h==f.from?' selected':''}>${t(h)}</option>`).join('')}</select></div>
+     <div class="field"><label for="c-to">Hasta</label><select id="c-to" data-c="to">${hs.map(h=>`<option value="${h+1}"${h+1==f.to?' selected':''}>${t(h+1)}</option>`).join('')}</select></div></div>
+    <button class="btn alt block" data-act="doconfirm"${S.busy?' disabled':''}>${I.cal} Confirmar</button>`}
+  if(S.sheet==='cal'){const e=ev(),c=e.confirmed;
+    inner=`<h3>Agregar al calendario</h3>
+    <div class="card ok"><div class="lbl st-ok">${esc(e.title)}</div><div class="big">${dayLong(c.date)} · ${t(c.from)}–${t(c.to)}</div>${e.place?`<div class="muted">${esc(e.place)}</div>`:''}</div>
+    <a class="opt" href="${gcalLink(e)}" target="_blank" rel="noopener"><span class="ic">G</span><span><b>Google Calendar</b><small>Abre el evento listo para guardar</small></span></a>
+    <button class="opt" data-act="ics"><span class="ic">A</span><span><b>Apple Calendar</b><small>Archivo para iPhone y Mac</small></span></button>
+    <a class="opt" href="${outlookLink(e)}" target="_blank" rel="noopener"><span class="ic">O</span><span><b>Outlook</b><small>Abre Outlook en la web</small></span></a>
+    <button class="opt" data-act="ics"><span class="ic">.ics</span><span><b>Otro calendario</b><small>Descargar archivo .ics</small></span></button>
+    <a class="btn block" href="https://wa.me/?text=${encodeURIComponent('¡Quedó confirmada "'+e.title+'"! '+dayLong(c.date)+' de '+t(c.from)+' a '+t(c.to)+(e.place?' en '+e.place:'')+'. Agregala a tu calendario desde acá: '+groupLink(S.gid))}" target="_blank" rel="noopener">Avisar al grupo por WhatsApp</a>
+    <small class="muted" style="text-align:center">Cada una puede agregarla a su calendario desde la app.</small>`}
+  if(S.sheet==='menu'){const known=Object.entries(store.groups);
+    inner=`<h3>Tus grupos</h3><div class="list">${known.map(([gid,k])=>`<button class="li opt" style="border:0;border-radius:0;padding:11px 0" data-act="open:${esc(gid)}"><span class="grow"><b>${esc(k.name||'Grupo')}</b>${gid===S.gid?' <small class="muted">· estás acá</small>':''}</span></button>`).join('')}</div>
+    <button class="btn ghost block" data-act="home">${I.plus} Crear otro grupo</button>
+    <p class="muted small">Estás como <b>${esc(mem(me()).name)}</b> en este grupo.</p>
+    <button class="linkbtn" data-act="notme">No soy ${esc(mem(me()).name)}</button>`}
+  return `<div class="sheet-bg" data-act="close"><div class="sheet" data-stop role="dialog" aria-modal="true"><div class="grab"></div>${inner}</div></div>`}
+
+// ===== Calendario =====
+function calTimes(e){const c=e.confirmed,d=c.date.replace(/-/g,'');
+  const end=c.to===24?addDays(c.date,1).replace(/-/g,'')+'T000000':d+'T'+pad(c.to)+'0000';return{start:d+'T'+pad(c.from)+'0000',end}}
+function gcalLink(e){const {start,end}=calTimes(e);const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(e.title)+'&dates='+start+'/'+end+(tz?'&ctz='+encodeURIComponent(tz):'')+(e.place?'&location='+encodeURIComponent(e.place):'')+'&details='+encodeURIComponent('Organizado con Juntadas: '+groupLink(S.gid))}
+function outlookLink(e){const c=e.confirmed;const s=c.date+'T'+pad(c.from)+':00:00';const en=(c.to===24?addDays(c.date,1)+'T00':c.date+'T'+pad(c.to))+':00:00';
+  return 'https://outlook.live.com/calendar/0/deeplink/compose?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&subject='+encodeURIComponent(e.title)+'&startdt='+s+'&enddt='+en+(e.place?'&location='+encodeURIComponent(e.place):'')+'&body='+encodeURIComponent('Organizado con Juntadas: '+groupLink(S.gid))}
+function icsText(e){const {start,end}=calTimes(e);const ie=s=>String(s).replace(/\\/g,'\\\\').replace(/[,;]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+  const stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Juntadas//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT','UID:'+e.id+'@juntadas','DTSTAMP:'+stamp,'DTSTART:'+start,'DTEND:'+end,'SUMMARY:'+ie(e.title),e.place?'LOCATION:'+ie(e.place):null,'DESCRIPTION:'+ie('Organizado con Juntadas: '+groupLink(S.gid)),'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n')+'\r\n'}
+function downloadIcs(e){const blob=new Blob([icsText(e)],{type:'text/calendar;charset=utf-8'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=(e.title.replace(/[^\w\-áéíóúñü ]+/gi,'').trim()||'juntada')+'.ics';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+
+// ===== Render =====
+let lastScreenKey='';
+function render(){
+  const y=window.scrollY,sk=S.status+S.screen+S.eid;
+  let html;
+  if(!S.gid&&S.status!=='cargando'&&S.status!=='sinapi')html=scrBienvenida();
+  else if(S.status!=='ok'&&S.status!=='unirse')html=scrEstado();
+  else if(S.status==='unirse')html=scrUnirse();
+  else html=({inicio:scrInicio,evento:scrEvento,dispo:scrDispo,gastos:scrGastos}[S.screen]||scrInicio)();
+  $app.innerHTML=html+sheet()+(S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:'');
+  if(sk===lastScreenKey)window.scrollTo(0,y);else window.scrollTo(0,0);
+  lastScreenKey=sk;
+  document.title=S.group?(S.group.name+' · Juntadas'):'Juntadas'}
+let toastT;function toast(m){S.toast=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{S.toast=null;render()},2600)}
+async function run(fn){if(S.busy)return;S.busy=true;try{await fn()}catch(err){S.busy=false;toast(err.message);return}S.busy=false;render()}
+
+// ===== Disponibilidad: guardar =====
+let saveT=null,pendingMine=null;
+function setMine(e,set){e.avail[me()]=[...set].sort();pendingMine={eid:e.id,slots:[...set]};clearTimeout(saveT);saveT=setTimeout(flushMine,500)}
+async function flushMine(){if(!pendingMine)return;const p=pendingMine;pendingMine=null;
+  try{await api('PUT','/groups/'+S.gid+'/events/'+p.eid+'/avail/'+me(),{slots:p.slots});if(!busyUi())render()}catch(err){toast(err.message)}}
+
+// ===== Acciones =====
+const val=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
+async function act(a,el){const[k,...rest]=a.split(':');const v=rest.join(':');
+  if(k!=='delev')S.delArm=null;
+  switch(k){
+  case'go':S.screen=v;S.sheet=null;S.sel=null;if(v==='gastos'){S.gOpen=false}break;
+  case'ev':S.eid=v;S.screen='evento';S.sel=null;break;
+  case'sheet':S.sheet=v;
+    if(v==='confirm'){const e=ev(),b=best(e);let f={date:b.day,from:b.from,to:b.to};
+      if(S.sel){const d=S.sel.slice(0,10),h=+S.sel.slice(11),sets=availSets(e),c=who(e,sets,S.sel).length;let to=h+1;while(to<e.hourTo&&who(e,sets,key(d,to)).length===c)to++;f={date:d,from:h,to}}
+      S.cf=f}break;
+  case'close':S.sheet=null;break;
+  case'cell':S.sel=S.sel===v?null:v;break;
+  case'mode':S.mode=v;break;
+  case'retry':S.status='cargando';render();return boot();
+  case'home':S.gid=null;S.group=null;S.sheet=null;S.status='ok';history.replaceState(null,'',location.pathname+location.search);break;
+  case'open':S.sheet=null;S.status='cargando';render();return openGroup(v);
+  case'creategroup':return run(async()=>{const name=val('n-group'),mine=val('n-me');if(!name||!mine)throw new Error('Completá el nombre del grupo y el tuyo');
+    const j=await api('POST','/groups',{name,memberName:mine});store.groups[j.group.id]={mid:j.memberId,name:j.group.name};saveStore();
+    S.gid=j.group.id;S.group=j.group;S.status='ok';S.screen='inicio';history.replaceState(null,'','#g='+S.gid);pickEvent();S.sheet='invite'});
+  case'iam':store.groups[S.gid]={mid:v,name:S.group.name};saveStore();S.status='ok';break;
+  case'join':return run(async()=>{const n=val('j-name');if(!n)throw new Error('Escribí tu nombre');
+    const j=await api('POST','/groups/'+S.gid+'/members',{name:n});store.groups[S.gid]={mid:j.memberId,name:S.group.name};saveStore();S.status='ok'});
+  case'notme':delete store.groups[S.gid].mid;saveStore();S.sheet=null;S.status='unirse';break;
+  case'newev':{const st=todayIso();S.nf={title:'',place:'',start:st,end:addDays(st,6),hourFrom:10,hourTo:24};S.sheet='newev';S.screen=S.screen==='evento'?'inicio':S.screen;break}
+  case'createev':return run(async()=>{const f=S.nf;if(!f.title.trim())throw new Error('Poné un nombre para la juntada');
+    if(!f.start||!f.end)throw new Error('Elegí los días');if(+f.hourFrom>=+f.hourTo)throw new Error('El horario "hasta" tiene que ser después del "desde"');
+    const j=await api('POST','/groups/'+S.gid+'/events',{...f,hourFrom:+f.hourFrom,hourTo:+f.hourTo,createdBy:me()});
+    S.eid=j.eventId;S.sheet=null;S.screen='dispo'});
+  case'doconfirm':return run(async()=>{const f=S.cf;if(+f.from>=+f.to)throw new Error('El horario "hasta" tiene que ser después del "desde"');
+    await api('PATCH','/groups/'+S.gid+'/events/'+S.eid,{confirmed:{date:f.date,from:+f.from,to:+f.to}});S.sheet='cal';S.sel=null});
+  case'unconfirm':return run(()=>api('PATCH','/groups/'+S.gid+'/events/'+S.eid,{confirmed:null}));
+  case'delev':if(S.delArm!==S.eid){S.delArm=S.eid;break}S.delArm=null;
+    return run(async()=>{await api('DELETE','/groups/'+S.gid+'/events/'+S.eid);pickEvent();S.screen='inicio'});
+  case'ics':downloadIcs(ev());return;
+  case'copy':try{await navigator.clipboard.writeText(groupLink(S.gid));toast('Link copiado')}catch{toast('Mantené apretado el link para copiarlo')}return;
+  case'share':try{await navigator.share({title:'Juntadas',text:'Sumate al grupo "'+S.group.name+'"',url:groupLink(S.gid)})}catch{}return;
+  case'preset':{const[a,b]=v.split('-');S.form.from=+a;S.form.to=+b;break}
+  case'addrange':{const e=ev(),f=S.form;if(+f.to<=+f.from){toast('El "hasta" tiene que ser después del "desde"');return}
+    const m=new Set(e.avail[me()]||[]);for(let h=+f.from;h<+f.to;h++)m.add(key(f.day,h));setMine(e,m);toast('Franja agregada');return}
+  case'delrun':{const e=ev(),[d,a,b]=v.split('|');const m=new Set(e.avail[me()]||[]);for(let h=+a;h<+b;h++)m.delete(key(d,h));setMine(e,m);break}
+  case'clear':{const e=ev();setMine(e,new Set());break}
+  case'gopen':S.gOpen=true;S.gf={desc:'',amt:'',payer:me(),among:new Set(members().map(m=>m.id))};break;
+  case'gclose':S.gOpen=false;break;
+  case'payer':S.gf.payer=v;break;
+  case'among':S.gf.among.has(v)?S.gf.among.delete(v):S.gf.among.add(v);break;
+  case'gsave':return run(async()=>{const g=S.gf,amt=parseFloat(String(g.amt).replace(/\$|\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));
+    if(!g.desc.trim())throw new Error('Escribí qué se compró');if(!(amt>0))throw new Error('Poné un monto válido');if(!g.among.size)throw new Error('Elegí entre quiénes se divide');
+    await api('POST','/groups/'+S.gid+'/events/'+S.eid+'/expenses',{desc:g.desc,amount:amt,payer:g.payer,among:[...g.among]});S.gOpen=false;toast('Gasto guardado')});
+  case'gdel':return run(()=>api('DELETE','/groups/'+S.gid+'/events/'+S.eid+'/expenses/'+v));
+  }
+  render()}
+
+$app.addEventListener('click',ev_=>{const el=ev_.target.closest('[data-act],[data-stop]');if(!el)return;
+  if(!el.hasAttribute('data-act'))return;
+  act(el.dataset.act,el)});
+$app.addEventListener('input',e_=>{const el=e_.target;
+  if(el.dataset.g)S.gf[el.dataset.g]=el.value;
+  if(el.dataset.n&&S.nf){S.nf[el.dataset.n]=el.value;if(el.dataset.n==='start'&&S.nf.end<el.value)S.nf.end=el.value}});
+$app.addEventListener('change',e_=>{const el=e_.target;
+  if(el.dataset.f){const k={'m-day':'day','m-from':'from','m-to':'to'}[el.dataset.f];S.form[k]=k==='day'?el.value:+el.value}
+  if(el.dataset.c&&S.cf)S.cf[el.dataset.c]=el.dataset.c==='date'?el.value:+el.value;
+  if(el.dataset.n&&S.nf){S.nf[el.dataset.n]=el.value;if(el.dataset.n==='start'){const end=document.getElementById('e-end');if(end&&end.value<el.value){end.value=el.value;S.nf.end=el.value}}}
+  if(el.dataset.change==='pick'){S.eid=el.value;S.sel=null;render()}});
+
+// Arrastrar sobre la grilla propia
+let dragging=false,paint=true,dragSet=null;
+function paintCell(c){if(!c||!c.dataset.cell)return;const k=c.dataset.cell;if(paint)dragSet.add(k);else dragSet.delete(k);c.classList.toggle('on',paint);c.setAttribute('aria-checked',paint)}
+$app.addEventListener('pointerdown',e_=>{const c=e_.target.closest('.grid.mine .c');if(!c)return;e_.preventDefault();
+  const e=ev();dragSet=new Set(e.avail[me()]||[]);dragging=true;paint=!dragSet.has(c.dataset.cell);paintCell(c)});
+$app.addEventListener('pointermove',e_=>{if(!dragging)return;const c=document.elementFromPoint(e_.clientX,e_.clientY);if(c&&c.closest)paintCell(c.closest('.grid.mine .c'))});
+const endDrag=()=>{if(!dragging)return;dragging=false;const e=ev();if(e){setMine(e,dragSet);render()}};
+window.addEventListener('pointerup',endDrag);window.addEventListener('pointercancel',endDrag);
+
+window.addEventListener('hashchange',()=>{const g=gidFromUrl();if(g&&g!==S.gid){S.status='cargando';render();openGroup(g)}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){flushMine();refresh()}else flushMine()});
+setInterval(()=>refresh(),POLL_MS);
+
+async function boot(){
+  S.status='cargando';render();
+  S.api=await findApi();
+  if(!S.api){S.status='sinapi';render();return}
+  const g=gidFromUrl();
+  if(g)return openGroup(g);
+  S.status='ok';S.gid=null;render()}
+boot();
+</script>
+</body>
+</html>
