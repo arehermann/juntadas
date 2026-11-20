@@ -79,6 +79,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+SINCE="$(date "+%Y-%m-%d %H:%M:%S")"
 sudo systemctl daemon-reload
 sudo systemctl enable --now juntadas.service juntadas-tunel.service
 sudo systemctl restart juntadas.service juntadas-tunel.service
@@ -86,7 +87,7 @@ sudo systemctl restart juntadas.service juntadas-tunel.service
 echo
 echo "Esperando que el túnel arranque..."
 for i in $(seq 1 30); do
-  URL="$(sudo journalctl -u juntadas-tunel -n 200 --no-pager 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || true)"
+  URL="$(sudo journalctl -u juntadas-tunel --since "$SINCE" --no-pager 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || true)"
   [ -n "$URL" ] && break
   sleep 2
 done
