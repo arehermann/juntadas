@@ -15,6 +15,8 @@ mkdir -p "$DIR"
 curl -fsSL "$RAW/juntadas_server.py" -o "$DIR/juntadas_server.py"
 curl -fsSL "$RAW/tunel.py" -o "$DIR/tunel.py"
 curl -fsSL "$RAW/respaldo.py" -o "$DIR/respaldo.py"
+curl -fsSL "$RAW/actualizar.sh" -o "$DIR/actualizar.sh"
+chmod +x "$DIR/actualizar.sh"
 
 echo "== 2/4  Instalando cloudflared (el túnel) =="
 if ! command -v cloudflared >/dev/null 2>&1; then
@@ -89,9 +91,32 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+sudo tee /etc/systemd/system/juntadas-actualizar.service >/dev/null <<EOF
+[Unit]
+Description=Juntadas (buscar actualizaciones en GitHub)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash $DIR/actualizar.sh $DIR $USER_NAME $REPO
+EOF
+
+sudo tee /etc/systemd/system/juntadas-actualizar.timer >/dev/null <<EOF
+[Unit]
+Description=Juntadas (actualizar cada 10 minutos)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target
+EOF
+
 SINCE="$(date "+%Y-%m-%d %H:%M:%S")"
 sudo systemctl daemon-reload
-sudo systemctl enable --now juntadas.service juntadas-tunel.service
+sudo systemctl enable --now juntadas.service juntadas-tunel.service juntadas-actualizar.timer
 sudo systemctl restart juntadas.service juntadas-tunel.service
 
 echo

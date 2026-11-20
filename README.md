@@ -60,7 +60,7 @@ Desde ahí, la Pi arranca todo sola cada vez que se prende.
 | Ver si anda | `systemctl status juntadas juntadas-tunel` |
 | Ver qué está pasando con el túnel | `journalctl -u juntadas-tunel -f` |
 | Reiniciar todo | `sudo systemctl restart juntadas juntadas-tunel` |
-| Actualizar a la última versión | volver a pegar la línea del paso 3 |
+| Actualizar a la última versión | no hace falta: la Pi revisa GitHub cada 10 minutos y se actualiza sola (`journalctl -u juntadas-actualizar` muestra qué hizo). Solo si cambia `instalar.sh` hay que volver a pegar la línea del paso 3. |
 | Cambiar la llave de GitHub | `rm ~/.juntadas.conf` y volver a pegar la línea del paso 3 |
 
 ## Si algo falla
@@ -73,4 +73,5 @@ Desde ahí, la Pi arranca todo sola cada vez que se prende.
 - `server/juntadas_server.py`: API en Python 3 sin dependencias. Probar local: `python3 server/juntadas_server.py --data /tmp/datos.json` y abrir `index.html?api=http://localhost:8787` desde un servidor local.
 - `server/tunel.py`: corre `cloudflared` y publica la dirección en `backend.json`.
 - `server/respaldo.py`: copia diaria de `datos.json` al repo privado `BACKUP_REPO` (se niega si el repo es público).
+- `server/actualizar.sh`: lo corre un timer cada 10 minutos; baja `juntadas_server.py`, `tunel.py`, `respaldo.py` y `actualizar.sh` de `main` y reinicia lo que cambió.
 - `server/instalar.sh`: instala todo como servicios de systemd.
