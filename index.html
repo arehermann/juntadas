@@ -126,7 +126,10 @@ p{margin:0;line-height:1.5}
 .badge{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-family:var(--num);white-space:nowrap}
 .badge.adm{border-color:var(--gr);color:var(--gr)}
 .badge.pend{border-color:var(--pk);color:var(--pk)}
-.chip.day[aria-pressed="false"]{text-decoration:line-through;color:var(--muted);border-color:var(--line)}
+.dstrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:-4px}
+.dd{border:0;border-radius:8px;padding:5px 0;background:color-mix(in srgb,var(--pk) 22%,transparent);color:var(--muted);font-size:.66rem;line-height:1.15;font-family:var(--num);text-transform:uppercase}
+.dd b{display:block;font-size:.9rem;color:var(--ink)}
+.dd[aria-pressed="false"]{background:transparent;outline:1px dashed var(--line);outline-offset:-1px;text-decoration:line-through;opacity:.55}
 .chip.sm{padding:5px 10px;font-size:.78rem}
 .av.gone{background:#3A4058!important;color:var(--ink)}
 .whorow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -451,11 +454,10 @@ function sheet(){if(!S.sheet)return'';let inner='';const e=ev();
     <div class="lbl">¿Qué días podría ser?</div>
     <div class="fields2"><div class="field"><label for="e-start">Desde</label><input type="date" id="e-start" data-n="start" value="${f.start}"></div>
       <div class="field"><label for="e-end">Hasta</label><input type="date" id="e-end" data-n="end" value="${f.end}"></div></div>
-    ${span.length>1&&span.length<=31?`<div class="field"><label>Tocá un día para sacarlo</label><div class="chips">${span.map(d=>`<button class="chip day" data-act="dayoff:${d}" aria-pressed="${!f.off.has(d)}">${dayLbl(d)}</button>`).join('')}</div>
-      <span class="muted small">${f.off.size?`Quedan ${span.length-f.off.size} de ${span.length} días.`:'Están todos los días del rango.'}</span></div>`:''}
+    ${span.length>1&&span.length<=31?`<div class="dstrip" role="group" aria-label="Tocá un día para sacarlo">${span.map(d=>`<button class="dd" data-act="dayoff:${d}" aria-pressed="${!f.off.has(d)}" aria-label="${dayLong(d)}">${wd(d)[0].toUpperCase()}<b>${dObj(d).getUTCDate()}</b></button>`).join('')}</div>`:''}
     <div class="lbl">¿En qué horario?</div>
     <div class="fields2"><div class="field"><label for="e-hf">Desde</label><select id="e-hf" data-n="hourFrom">${hs.slice(0,24).map(h=>`<option value="${h}"${h==f.hourFrom?' selected':''}>${t(h)}</option>`).join('')}</select></div>
-      <div class="field"><label for="e-ht">Hasta</label><select id="e-ht" data-n="hourTo">${hs.slice(1).map(h=>`<option value="${h}"${h==f.hourTo?' selected':''}>${h===24?'00:00 (medianoche)':t(h)}</option>`).join('')}</select></div></div>
+      <div class="field"><label for="e-ht">Hasta</label><select id="e-ht" data-n="hourTo">${hs.slice(1).map(h=>`<option value="${h}"${h==f.hourTo?' selected':''}>${t(h)}</option>`).join('')}</select></div></div>
     ${f.edit?'<p class="muted small">Si sacás un día o acortás el horario, se borran los horarios que marcaron ahí.</p>':'<p class="muted small">Vos vas a organizar esta juntada: invitás a la gente, confirmás la fecha y podés sacar a alguien.</p>'}
     <button class="btn block" data-act="${f.edit?'saveev':'createev'}"${S.busy?' disabled':''}>${f.edit?'Guardar cambios':'Crear juntada'}</button>`}
   if(S.sheet==='confirm'&&e){const f=S.cf,hs=hoursOf(e);
