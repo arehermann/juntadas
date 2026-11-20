@@ -1,0 +1,14 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>
+<rect width='512' height='512' fill='#0A0E1B'/>
+<g stroke='rgba(120,135,190,.18)' stroke-width='3'><path d='M32 0V512M0 32H512'/><path d='M96 0V512M0 96H512'/><path d='M160 0V512M0 160H512'/><path d='M224 0V512M0 224H512'/><path d='M288 0V512M0 288H512'/><path d='M352 0V512M0 352H512'/><path d='M416 0V512M0 416H512'/><path d='M480 0V512M0 480H512'/></g>
+<g transform='translate(256 256) scale(1) translate(-256 -256)'>
+<rect x='96' y='120' width='320' height='296' rx='44' fill='#0E1324' stroke='#7FA9D6' stroke-width='22'/>
+<path d='M96 196H416' stroke='#7FA9D6' stroke-width='22'/>
+<path d='M176 92V148M336 92V148' stroke='#7FA9D6' stroke-width='22' stroke-linecap='round'/>
+<rect x='150' y='236' width='62' height='48' rx='9' fill='#B3A1DB' opacity='.45'/>
+<rect x='225' y='236' width='62' height='48' rx='9' fill='#E3B76B'/>
+<rect x='300' y='236' width='62' height='48' rx='9' fill='#B3A1DB'/>
+<rect x='150' y='300' width='62' height='48' rx='9' fill='#B3A1DB'/>
+<rect x='225' y='300' width='62' height='48' rx='9' fill='#B3A1DB' opacity='.45'/>
+<rect x='300' y='300' width='62' height='48' rx='9' fill='#4A6A99'/>
+</g></svg>

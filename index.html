@@ -6,7 +6,14 @@
 <meta name="theme-color" content="#0A0E1B">
 <meta name="description" content="Coordiná juntadas con tus amigas: disponibilidad, fecha y gastos.">
 <title>Juntadas</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0E1B'/%3E%3Crect x='6' y='8' width='20' height='18' rx='3' fill='none' stroke='%237FA9D6' stroke-width='2.5'/%3E%3Crect x='10' y='14' width='5' height='4' fill='%23E3B76B'/%3E%3Crect x='17' y='14' width='5' height='4' fill='%23B3A1DB'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Juntadas">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0E1B'/%3E%3Crect x='6' y='8' width='20' height='18' rx='3' fill='none' stroke='%237FA9D6' stroke-width='2.5'/%3E%3Crect x='10' y='14' width='5' height='4' fill='%23E3B76B'/%3E%3Crect x='17' y='14' width='5' height='4' fill='%23B3A1DB'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap">
@@ -123,6 +130,9 @@ p{margin:0;line-height:1.5}
 .av.gone{background:#3A4058!important;color:var(--ink)}
 .whorow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .whorow .k{width:96px;flex:none;color:var(--muted);font-size:.86rem}
+.card.install{flex-direction:row;gap:12px;align-items:flex-start}
+.install img{width:44px;height:44px;border-radius:12px;flex:none}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;line-height:1.45}
 .warn{font-size:.85rem;color:var(--muted);border-left:3px solid var(--gr);padding-left:10px}
 </style>
 </head>
@@ -182,6 +192,18 @@ const saveStore=()=>lsSet(store);
 const S={api:null,status:'cargando',me:null,events:[],eid:null,screen:'inicio',mode:'tactil',
   sel:null,sheet:null,toast:null,busy:false,offline:false,invite:null,err:null,
   form:{day:null,from:null,to:null},gOpen:false,gf:null,nf:null,cf:null,arm:null,pay:null};
+
+// ===== Instalar en el celular =====
+let installEvt=null;
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const canInstall=()=>!isStandalone()&&(installEvt||isIOS);
+window.addEventListener('beforeinstallprompt',e_=>{e_.preventDefault();installEvt=e_;if(S.status==='ok')render()});
+window.addEventListener('appinstalled',()=>{installEvt=null;toast('¡Listo! Ya podés abrir Juntadas desde el ícono')});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+function installCard(){if(!canInstall()||store.noInstall)return'';
+  return `<div class="card hi install"><img src="icons/icon-192.png" alt=""><div class="grow"><h3>Instalala en tu celular</h3><span class="muted small">Se abre desde un ícono, a pantalla completa, sin buscar el link.</span>
+    <div class="row" style="margin-top:8px;gap:14px"><button class="chip" data-act="install">Instalar</button><button class="linkbtn" data-act="noinstall">Ahora no</button></div></div></div>`}
 
 const ev=()=>S.events.find(e=>e.id===S.eid)||null;
 const meId=()=>S.me&&S.me.id;
@@ -276,7 +298,11 @@ function scrBienvenida(){
     <div class="field"><label for="w-name">Tu nombre</label><input id="w-name" maxlength="30" placeholder="Como te conocen" autocomplete="given-name"></div>
     <button class="btn block" data-act="start">Empezar</button>
     <p class="muted small">No hace falta crear cuenta. Este celular queda recordado y te damos un link personal para entrar desde otro.</p></div>
-  <p class="muted small">¿Te invitaron a una juntada? Abrí el link que te pasaron. ¿Ya usabas Juntadas en otro celular? Abrí tu link personal.</p>
+  <div class="card"><h3>¿Ya usabas Juntadas?</h3>
+    <div class="field"><label for="w-link">Pegá tu link personal</label><input id="w-link" placeholder="https://…#k=…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <button class="btn ghost block" data-act="pastekey">Entrar</button>
+    ${isIOS&&isStandalone()?'<p class="muted small">En iPhone, la app instalada no comparte la sesión con Safari. Por eso hay que pegar el link personal una vez.</p>':''}</div>
+  <p class="muted small">¿Te invitaron a una juntada? Abrí el link que te pasaron.</p>
   </div>`}
 
 function scrInvitacion(){const x=S.invite;
@@ -298,6 +324,7 @@ function scrInicio(){
       <div class="row between"><div class="avs">${e.members.map(m=>av(e,m.id)).join('')}</div>${!c&&b.c>0?`<span class="num muted small">Mejor: ${dayLbl(b.day)} · ${t(b.from)}</span>`:isAdmin(e)?'<span class="badge adm">Organizás</span>':''}</div>
     </button>`}).join('');
   return topbar('Hola, '+esc(S.me.name),'¿Cuándo nos vemos?',null,`<button class="iconbtn" data-act="sheet:menu" aria-label="Tu cuenta">${I.menu}</button>`)+banner()+`<div class="body">
+  ${installCard()}
   <div class="row between"><div class="lbl">Tus juntadas</div><button class="chip" data-act="newev">+ Nueva</button></div>
   ${evs||`<div class="card"><p class="muted">Todavía no tenés juntadas. Creá una con <b>+ Nueva</b> e invitá a quien quieras con el link. Cada una ve solo las juntadas a las que la invitaron.</p></div>`}
   </div>`+nav()}
@@ -443,7 +470,19 @@ function sheet(){if(!S.sheet)return'';let inner='';const e=ev();
     <p class="muted">Con este link entrás como <b>${esc(S.me.name)}</b> desde cualquier celular o compu. Guardalo (por ejemplo, mandátelo a vos misma por WhatsApp o mail).</p>
     <div class="warn">No se lo pases a nadie: quien lo tenga puede entrar como vos.</div>
     <div class="copybox"><span class="grow">${esc(personalLink())}</span><button class="chip" data-act="copy:personal">Copiar</button></div>
+    ${S.sheet==='menu'&&canInstall()?`<button class="opt" data-act="install"><img src="icons/icon-192.png" alt="" style="width:36px;height:36px;border-radius:10px"><span><b>Instalar en el celular</b><small>Abrila desde un ícono</small></span></button>`:''}
     ${S.sheet==='menu'?`<div class="field"><label for="me-name">Tu nombre</label><input id="me-name" maxlength="30" value="${esc(S.me.name)}"></div><button class="btn ghost block" data-act="rename">Guardar nombre</button>`:`<button class="btn block" data-act="close">Entendido</button>`}`}
+  if(S.sheet==='ios'){
+    inner=`<h3>Instalar en iPhone</h3>
+    <ol class="steps">
+      <li><b>Copiá tu link personal.</b> En iPhone la app instalada no comparte la sesión con Safari, así que lo vas a pegar una vez al abrirla.
+        <div class="copybox" style="margin-top:6px"><span class="grow">${esc(personalLink())}</span><button class="chip" data-act="copy:personal">Copiar</button></div></li>
+      <li>Abajo en Safari, tocá <b>Compartir</b> ${I.share.replace('<svg ','<svg style="width:18px;height:18px;vertical-align:-3px" ')}.</li>
+      <li>Bajá y tocá <b>Agregar a inicio</b> (o "Agregar a pantalla de inicio") y después <b>Agregar</b>.</li>
+      <li>Abrí Juntadas desde el ícono nuevo y pegá tu link personal donde dice "¿Ya usabas Juntadas?".</li>
+    </ol>
+    <p class="muted small">Si no ves "Agregar a inicio", abrí esta página en Safari (no desde WhatsApp ni Chrome).</p>
+    <button class="btn block" data-act="close">Entendido</button>`}
   return `<div class="sheet-bg" data-act="close"><div class="sheet" data-stop role="dialog" aria-modal="true"><div class="grab"></div>${inner}</div></div>`}
 
 // ===== Calendario =====
@@ -502,6 +541,12 @@ async function act(a){const[k,...rest]=a.split(':');const v=rest.join(':');
   case'cell':S.sel=S.sel===v?null:v;break;
   case'mode':S.mode=v;break;
   case'retry':return boot();
+  case'install':if(installEvt){const ie=installEvt;installEvt=null;S.sheet=null;render();ie.prompt();try{const c=await ie.userChoice;if(c.outcome!=='accepted')toast('Podés instalarla después desde el menú ☰')}catch{}return}
+    if(isIOS){S.sheet='ios';break}return;
+  case'noinstall':store.noInstall=true;saveStore();break;
+  case'pastekey':{const m=val('w-link').match(/#k=([A-Za-z0-9]+)/)||val('w-link').match(/^([A-Za-z0-9]{32})$/);
+    if(!m){toast('Ese no parece tu link personal. Tiene que terminar en #k= y un código.');return}
+    location.hash='k='+m[1];return}
   case'start':return run(async()=>{const n=val('w-name');if(!n)throw new Error('Escribí tu nombre');
     const j=await api('POST','/me',{name:n});store.token=j.token;saveStore();S.err=null;S.status='ok';S.screen='inicio';S.sheet='welcome'});
   case'accept':return run(async()=>{const inv=S.invite;let first=false;

@@ -23,6 +23,10 @@ App web para el celular para coordinar juntadas con amigas: grupos, invitación 
 - No hace falta crear cuenta. Al entrar, cada persona recibe una llave personal secreta que queda guardada en su celular, y un **link personal** para entrar desde otro dispositivo. La Raspberry revisa esa llave en cada pedido, así que nadie puede hacerse pasar por otra ni ver juntadas ajenas, aunque la dirección de la Pi sea pública.
 - Copias de seguridad: una por día en la Pi (`~/juntadas-datos/copias/`) y otra por día en el repo **privado** `arehermann/juntadas-datos`. Las llaves personales no se guardan (solo una huella), así que una copia no sirve para entrar como otra persona.
 
+## Instalarla en el celular
+- **Android (Chrome)**: en la app aparece "Instalala en tu celular" → **Instalar**. También desde el menú ☰.
+- **iPhone (Safari)**: tocá **Instalar** y seguí los pasos (Compartir → Agregar a inicio). En iPhone la app instalada no comparte la sesión con Safari: la primera vez pegá tu link personal.
+
 ## Puesta en marcha (una sola vez)
 
 ### 1. Activar la página en GitHub
@@ -65,6 +69,7 @@ Desde ahí, la Pi arranca todo sola cada vez que se prende.
 
 ## Para programar
 - `index.html`: toda la app (HTML, CSS y JS, sin build).
+- `manifest.webmanifest`, `sw.js`, `icons/`: para instalarla como app (PWA). Al cambiar archivos de la cáscara, subí `CACHE` en `sw.js`.
 - `server/juntadas_server.py`: API en Python 3 sin dependencias. Probar local: `python3 server/juntadas_server.py --data /tmp/datos.json` y abrir `index.html?api=http://localhost:8787` desde un servidor local.
 - `server/tunel.py`: corre `cloudflared` y publica la dirección en `backend.json`.
 - `server/respaldo.py`: copia diaria de `datos.json` al repo privado `BACKUP_REPO` (se niega si el repo es público).
