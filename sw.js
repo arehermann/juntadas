@@ -1,6 +1,6 @@
 // Service worker de Juntadas: guarda la "cáscara" de la app para que abra rápido
 // y aunque no haya señal. Los datos siempre vienen de la Raspberry (no se guardan acá).
-const CACHE = 'juntadas-v3';
+const CACHE = 'juntadas-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

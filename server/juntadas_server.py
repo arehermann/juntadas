@@ -64,6 +64,8 @@ def load():
             print("Datos de la versión anterior guardados en", old, flush=True)
     for k, v in empty_db().items():
         DB.setdefault(k, v)
+    for e in DB["events"].values():  # juntadas creadas antes de poder sacar días
+        e.setdefault("days", day_range(e["start"], e["end"]))
 
 
 def save():
@@ -127,6 +129,43 @@ def hour(v, lo, hi):
 SLOT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}$")
 
 
+def day_range(start, end):
+    d, out = date.fromisoformat(start), []
+    while d.isoformat() <= end and len(out) < 32:
+        out.append(d.isoformat())
+        d = date.fromordinal(d.toordinal() + 1)
+    return out
+
+
+def schedule(body, e=None):
+    """Días y horario de una juntada: una lista de días elegidos (o un rango desde/hasta) y horas."""
+    if body.get("days") is not None:
+        raw = body.get("days")
+        if not isinstance(raw, list) or len(raw) > 31:
+            raise ApiError(400, "Elegí hasta 31 días")
+        days = sorted({iso_day(d, "Un día") for d in raw})
+    elif body.get("start") is not None or e is None:
+        start, end = iso_day(body.get("start"), "Desde"), iso_day(body.get("end"), "Hasta")
+        if end < start:
+            start, end = end, start
+        days = day_range(start, end)
+    else:
+        days = list(e["days"])
+    if not days:
+        raise ApiError(400, "Dejá al menos un día")
+    if (date.fromisoformat(days[-1]) - date.fromisoformat(days[0])).days > 30:
+        raise ApiError(400, "Los días tienen que estar dentro de un rango de 31 días")
+    hf = hour(body.get("hourFrom", e["hourFrom"] if e else 10), 0, 23)
+    ht = hour(body.get("hourTo", e["hourTo"] if e else 24), 1, 24)
+    if hf >= ht:
+        raise ApiError(400, "El horario \"hasta\" tiene que ser después del \"desde\"")
+    return days, hf, ht
+
+
+def slot_ok(e, s):
+    return isinstance(s, str) and SLOT_RE.match(s) and s[:10] in e["days"] and e["hourFrom"] <= int(s[11:]) < e["hourTo"]
+
+
 # ---------- lógica ----------
 
 def person_view(pid):
@@ -145,7 +184,7 @@ def balances(e):
 
 
 def event_view(e, pid):
-    v = {k: e[k] for k in ("id", "title", "place", "start", "end", "hourFrom", "hourTo",
+    v = {k: e[k] for k in ("id", "title", "place", "start", "end", "days", "hourFrom", "hourTo",
                            "adminId", "avail", "confirmed", "expenses", "created", "updated")}
     v["members"] = [person_view(m) for m in e["members"]]
     gone = {x["payer"] for x in e["expenses"]} | {m for x in e["expenses"] for m in x["among"]}
@@ -220,7 +259,7 @@ def route(method, parts, body, pid, ip):
         if not e or not hmac.compare_digest(e["invite"], parts[2]):
             raise ApiError(404, "La invitación no es válida o ya se cambió. Pedile a quien organiza un link nuevo.")
         return 200, {"event": {"id": e["id"], "title": e["title"], "place": e["place"], "start": e["start"],
-                               "end": e["end"], "admin": person_view(e["adminId"])["name"],
+                               "end": e["end"], "days": e["days"], "admin": person_view(e["adminId"])["name"],
                                "count": len(e["members"]), "already": pid in e["members"] if pid else False}}
 
     # Con llave
@@ -251,20 +290,13 @@ def route(method, parts, body, pid, ip):
         return 200, out
 
     if method == "POST" and parts == ["events"]:
-        start, end = iso_day(body.get("start"), "Desde"), iso_day(body.get("end"), "Hasta")
-        if end < start:
-            start, end = end, start
-        if (date.fromisoformat(end) - date.fromisoformat(start)).days > 30:
-            raise ApiError(400, "Elegí un rango de hasta 31 días")
-        hf, ht = hour(body.get("hourFrom", 10), 0, 23), hour(body.get("hourTo", 24), 1, 24)
-        if hf >= ht:
-            raise ApiError(400, "El horario \"hasta\" tiene que ser después del \"desde\"")
+        days, hf, ht = schedule(body)
         if sum(1 for e in DB["events"].values() if e["adminId"] == pid) >= 200:
             raise ApiError(400, "Demasiadas juntadas")
         e = {"id": new_id(12), "invite": new_id(16), "adminId": pid, "members": [pid],
              "title": text(body.get("title"), "el nombre de la juntada", 60),
              "place": text(body.get("place"), "el lugar", 80, required=False),
-             "start": start, "end": end, "hourFrom": hf, "hourTo": ht,
+             "start": days[0], "end": days[-1], "days": days, "hourFrom": hf, "hourTo": ht,
              "avail": {}, "confirmed": None, "expenses": [], "created": now_ms()}
         touch(e)
         DB["events"][e["id"]] = e
@@ -278,6 +310,15 @@ def route(method, parts, body, pid, ip):
 
         if method == "PATCH" and sub == []:
             require_admin(e, pid)
+            if any(k in body for k in ("days", "start", "end", "hourFrom", "hourTo")):
+                days, hf, ht = schedule(body, e)
+                c = e["confirmed"]
+                if c and (c["date"] not in days or c["from"] < hf or c["to"] > ht):
+                    raise ApiError(409, "La fecha confirmada queda afuera. Tocá \"Volver a votar\" antes de sacar ese día u horario.")
+                title = text(body.get("title"), "el nombre de la juntada", 60) if "title" in body else e["title"]
+                e.update({"days": days, "start": days[0], "end": days[-1], "hourFrom": hf, "hourTo": ht})
+                for m in list(e["avail"]):
+                    e["avail"][m] = [s_ for s_ in e["avail"][m] if slot_ok(e, s_)]
             if "title" in body:
                 e["title"] = text(body.get("title"), "el nombre de la juntada", 60)
             if "place" in body:
@@ -288,6 +329,8 @@ def route(method, parts, body, pid, ip):
                     e["confirmed"] = None
                 else:
                     day = iso_day(c.get("date"), "La fecha")
+                    if day not in e["days"]:
+                        raise ApiError(400, "Ese día no está entre los días de la juntada")
                     f, t = hour(c.get("from"), 0, 23), hour(c.get("to"), 1, 24)
                     if f >= t:
                         raise ApiError(400, "El horario \"hasta\" tiene que ser después del \"desde\"")
@@ -341,9 +384,7 @@ def route(method, parts, body, pid, ip):
             slots = body.get("slots")
             if not isinstance(slots, list) or len(slots) > 31 * 24:
                 raise ApiError(400, "Horarios inválidos")
-            e["avail"][pid] = sorted({s for s in slots if isinstance(s, str) and SLOT_RE.match(s)
-                                      and e["start"] <= s[:10] <= e["end"]
-                                      and e["hourFrom"] <= int(s[11:]) < e["hourTo"]})
+            e["avail"][pid] = sorted({s for s in slots if slot_ok(e, s)})
             touch(e)
             return 200, me_payload(pid)
 
