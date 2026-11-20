@@ -19,7 +19,9 @@ App web para el celular para coordinar juntadas con amigas: grupos, invitación 
 - Nadie necesita instalar nada ni usar Tailscale: solo abren el link.
 - Los datos quedan en la Raspberry, en `~/juntadas-datos/datos.json`, con una copia diaria en `~/juntadas-datos/copias/` (guarda las últimas 14).
 - El túnel de Cloudflare no pide cuenta ni dominio. Su dirección cambia cada vez que la Pi se reinicia, por eso la Pi la anota en `backend.json` y la página la busca sola.
-- No hay contraseñas: quien tenga el link de un grupo puede entrar. El link tiene un código largo imposible de adivinar, así que pasalo solo a quien quieras.
+- Cada una ve solo las juntadas a las que la invitaron. Quien crea una juntada la organiza: invita con un link, confirma la fecha y puede sacar a alguien. Nadie puede salir ni ser sacada si tiene cuentas pendientes.
+- No hace falta crear cuenta. Al entrar, cada persona recibe una llave personal secreta que queda guardada en su celular, y un **link personal** para entrar desde otro dispositivo. La Raspberry revisa esa llave en cada pedido, así que nadie puede hacerse pasar por otra ni ver juntadas ajenas, aunque la dirección de la Pi sea pública.
+- Copias de seguridad: una por día en la Pi (`~/juntadas-datos/copias/`) y otra por día en el repo **privado** `arehermann/juntadas-datos`. Las llaves personales no se guardan (solo una huella), así que una copia no sirve para entrar como otra persona.
 
 ## Puesta en marcha (una sola vez)
 
@@ -32,6 +34,7 @@ App web para el celular para coordinar juntadas con amigas: grupos, invitación 
 1. Entrá a https://github.com/settings/personal-access-tokens/new
 2. *Token name*: `juntadas-pi`. *Expiration*: la más larga que te deje.
 3. *Repository access*: **Only select repositories** → elegí **juntadas**.
+   Antes, creá un repo **privado** vacío llamado `juntadas-datos` (para las copias) y elegí también ese.
 4. *Permissions* → *Repository permissions* → **Contents**: **Read and write**.
 5. Tocá **Generate token** y copiá la llave (empieza con `github_pat_`). Solo se ve una vez.
 
@@ -64,4 +67,5 @@ Desde ahí, la Pi arranca todo sola cada vez que se prende.
 - `index.html`: toda la app (HTML, CSS y JS, sin build).
 - `server/juntadas_server.py`: API en Python 3 sin dependencias. Probar local: `python3 server/juntadas_server.py --data /tmp/datos.json` y abrir `index.html?api=http://localhost:8787` desde un servidor local.
 - `server/tunel.py`: corre `cloudflared` y publica la dirección en `backend.json`.
+- `server/respaldo.py`: copia diaria de `datos.json` al repo privado `BACKUP_REPO` (se niega si el repo es público).
 - `server/instalar.sh`: instala todo como servicios de systemd.

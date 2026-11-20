@@ -116,14 +116,23 @@ p{margin:0;line-height:1.5}
 .spin{width:26px;height:26px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--cy);animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}.toast{animation:fade .2s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.4}}@keyframes fade{from{opacity:0}}}
+.badge{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-family:var(--num);white-space:nowrap}
+.badge.adm{border-color:var(--gr);color:var(--gr)}
+.badge.pend{border-color:var(--pk);color:var(--pk)}
+.chip.sm{padding:5px 10px;font-size:.78rem}
+.av.gone{background:#3A4058!important;color:var(--ink)}
+.whorow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.whorow .k{width:96px;flex:none;color:var(--muted);font-size:.86rem}
+.warn{font-size:.85rem;color:var(--muted);border-left:3px solid var(--gr);padding-left:10px}
 </style>
 </head>
 <body>
-<div class="app" id="app"><div class="body"><div class="center"><div class="spin"></div></div></div></div>
+<div class="app" id="app"><div class="body"><div class="center" style="align-items:center"><div class="spin"></div></div></div></div>
 <script>
 // ===== Configuración =====
 const REPO='arehermann/juntadas';           // repo de GitHub donde la Raspberry anota su dirección
 const POLL_MS=15000;                         // cada cuánto se actualiza solo
+const COLORS=['#E3B76B','#D99AAE','#8FC4A4','#B3A1DB','#8FB8DE','#E0A383','#C9B37E','#9FC9C9','#C4A0C4','#A9B98A','#DDA0A0','#94A8D6'];
 
 // ===== Utilidades =====
 const $app=document.getElementById('app');
@@ -158,29 +167,32 @@ const I={
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  key:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>',
   share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>'
 };
 
-// ===== Guardado local (solo comodidad: qué grupos abriste y quién sos en cada uno) =====
-const LS='juntadas:v1';
+// ===== Guardado en el celular: tu llave personal y la dirección de la Raspberry =====
+const LS='juntadas:v2';
 function lsGet(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch{return{}}}
 function lsSet(v){try{localStorage.setItem(LS,JSON.stringify(v))}catch{}}
-const store=Object.assign({groups:{}},lsGet());
-store.groups=store.groups||{};
+const store=lsGet();
 const saveStore=()=>lsSet(store);
 
 // ===== Estado =====
-const S={api:null,status:'cargando',gid:null,group:null,eid:null,screen:'inicio',mode:'tactil',
-  sel:null,sheet:null,toast:null,busy:false,offline:false,
-  form:{day:null,from:null,to:null},gOpen:false,gf:{desc:'',amt:'',payer:null,among:null},
-  nf:null,cf:null,delArm:null};
+const S={api:null,status:'cargando',me:null,events:[],eid:null,screen:'inicio',mode:'tactil',
+  sel:null,sheet:null,toast:null,busy:false,offline:false,invite:null,err:null,
+  form:{day:null,from:null,to:null},gOpen:false,gf:null,nf:null,cf:null,arm:null,pay:null};
 
-const me=()=>S.gid&&store.groups[S.gid]?store.groups[S.gid].mid:null;
-const members=()=>S.group?S.group.members:[];
-const mem=id=>members().find(m=>m.id===id)||{id,name:'?',color:'#666'};
-const ev=()=>S.group&&S.group.events.find(e=>e.id===S.eid)||null;
-const nameOf=id=>id===me()?'Vos':mem(id).name;
-const av=id=>{const m=mem(id);return `<span class="av" style="background:${esc(m.color)}" title="${esc(m.name)}">${esc((m.name[0]||'?').toUpperCase())}</span>`};
+const ev=()=>S.events.find(e=>e.id===S.eid)||null;
+const meId=()=>S.me&&S.me.id;
+const isAdmin=e=>e&&e.adminId===meId();
+function person(e,id){const i=e.members.findIndex(m=>m.id===id);
+  if(i>=0)return{...e.members[i],color:COLORS[i%COLORS.length]};
+  const f=(e.former||[]).find(m=>m.id===id);return{id,name:f?f.name:'?',color:null,gone:true}}
+const nameOf=(e,id)=>id===meId()?'Vos':person(e,id).name;
+const av=(e,id)=>{const p=person(e,id);return `<span class="av${p.gone?' gone':''}" ${p.color?`style="background:${p.color}"`:''} title="${esc(p.name)}">${esc((p.name[0]||'?').toUpperCase())}</span>`};
+const personalLink=()=>location.origin+location.pathname+'#k='+store.token;
+const inviteLink=e=>location.origin+location.pathname+'#i='+e.id+'.'+e.invite;
 
 // ===== Conexión con la Raspberry =====
 async function healthy(url){
@@ -201,15 +213,18 @@ async function findApi(){
   if(u&&await healthy(u)){store.api=u.replace(/\/$/,'');saveStore();return store.api}
   return null}
 
+class AuthError extends Error{}
 async function api(method,path,body){
   if(!S.api)throw new Error('Sin conexión con la Raspberry');
+  const headers={};if(body)headers['Content-Type']='application/json';if(store.token)headers.Authorization='Bearer '+store.token;
   let r;
-  try{r=await fetch(S.api+'/api'+path,{method,cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined})}
+  try{r=await fetch(S.api+'/api'+path,{method,cache:'no-store',headers,body:body?JSON.stringify(body):undefined})}
   catch(err){S.offline=true;reconnect();throw new Error('No hay conexión con la Raspberry. Probá de nuevo en un ratito.')}
   const j=await r.json().catch(()=>({}));
+  if(r.status===401&&store.token)throw new AuthError(j.error||'Llave inválida');
   if(!r.ok)throw new Error(j.error||('Error '+r.status));
   S.offline=false;
-  if(j.group&&j.group.id===S.gid)S.group=j.group;
+  if(j.me){S.me=j.me;S.events=j.events||[];pickEvent()}
   return j}
 
 let reconnecting=false;
@@ -217,44 +232,34 @@ async function reconnect(){if(reconnecting)return;reconnecting=true;
   const u=await findApi();reconnecting=false;
   if(u){S.api=u;S.offline=false;await refresh(true)}else render()}
 
-// ===== Navegación por link =====
-function gidFromUrl(){const m=location.hash.match(/g=([A-Za-z0-9]+)/);return m?m[1]:null}
-const groupLink=gid=>location.origin+location.pathname+'#g='+gid;
-
-async function openGroup(gid){
-  S.gid=gid;S.group=null;S.sel=null;S.sheet=null;S.screen='inicio';
-  if(location.hash!=='#g='+gid)history.replaceState(null,'','#g='+gid);
-  try{const j=await api('GET','/groups/'+gid);S.group=j.group;
-    const k=store.groups[gid];
-    if(k){k.name=j.group.name;if(!j.group.members.some(m=>m.id===k.mid))delete k.mid;saveStore()}
-    pickEvent();S.status=me()?'ok':'unirse'}
-  catch(err){S.status=/No existe/.test(err.message)?'nogrupo':'error';S.err=err.message}
-  render()}
-
-function pickEvent(){const es=S.group?S.group.events:[];if(!es.find(e=>e.id===S.eid))S.eid=es[0]?es[0].id:null}
+function pickEvent(){if(!S.events.find(e=>e.id===S.eid))S.eid=S.events[0]?S.events[0].id:null}
+function lostKey(){delete store.token;saveStore();S.me=null;S.events=[];S.status='bienvenida';S.err='Tu llave personal ya no es válida en este celular. Si tenés tu link personal, abrilo; si no, entrá de nuevo con un link de invitación.'}
 
 async function refresh(force){
-  if(!S.gid||!S.api||document.hidden)return;
-  try{const old=S.group&&S.group.updated;const j=await api('GET','/groups/'+S.gid);
-    if(force||j.group.updated!==old){pickEvent();if(!busyUi())render()}}catch{render()}}
+  if(!S.api||!store.token||document.hidden||S.status!=='ok')return;
+  try{const before=JSON.stringify(S.events.map(e=>[e.id,e.updated]));await api('GET','/me');
+    if(force||before!==JSON.stringify(S.events.map(e=>[e.id,e.updated]))){if(!busyUi())render()}}
+  catch(err){if(err instanceof AuthError){lostKey()}render()}}
 const busyUi=()=>dragging||(document.activeElement&&/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName));
 
 // ===== Cálculos =====
-function availSets(e){const o={};members().forEach(m=>o[m.id]=new Set((e.avail&&e.avail[m.id])||[]));return o}
-function who(e,sets,k){return members().filter(m=>sets[m.id].has(k)).map(m=>m.id)}
+function availSets(e){const o={};e.members.forEach(m=>o[m.id]=new Set(e.avail[m.id]||[]));return o}
+const respondedIds=e=>e.members.filter(m=>(e.avail[m.id]||[]).length).map(m=>m.id);
+function whoCan(e,sets,k){return e.members.filter(m=>sets[m.id].has(k)).map(m=>m.id)}
 function best(e){const sets=availSets(e);let b={c:-1};
-  daysOf(e).forEach(d=>{const hs=hoursOf(e);let i=0;while(i<hs.length){const c=who(e,sets,key(d,hs[i])).length;let j=i;
-    while(j+1<hs.length&&who(e,sets,key(d,hs[j+1])).length===c)j++;
+  daysOf(e).forEach(d=>{const hs=hoursOf(e);let i=0;while(i<hs.length){const c=whoCan(e,sets,key(d,hs[i])).length;let j=i;
+    while(j+1<hs.length&&whoCan(e,sets,key(d,hs[j+1])).length===c)j++;
     if(c>b.c||(c===b.c&&j-i>b.e-b.s))b={c,day:d,s:i,e:j,from:hs[i],to:hs[j]+1};i=j+1}});
   return b}
 function myRuns(e,mine){const out=[];daysOf(e).forEach(d=>{let st=null;for(let h=e.hourFrom;h<=e.hourTo;h++){const on=h<e.hourTo&&mine.has(key(d,h));
   if(on&&st===null)st=h;if(!on&&st!==null){out.push({day:d,from:st,to:h});st=null}}});return out}
-function responded(e){return members().filter(m=>(e.avail[m.id]||[]).length).length}
-function balances(e){const b={};members().forEach(m=>b[m.id]=0);
-  e.expenses.forEach(x=>{if(b[x.payer]===undefined)b[x.payer]=0;b[x.payer]+=x.amount;const sh=x.amount/x.among.length;x.among.forEach(m=>{b[m]=(b[m]||0)-sh})});return b}
+function balances(e){const b={};e.members.forEach(m=>b[m.id]=0);
+  e.expenses.forEach(x=>{b[x.payer]=(b[x.payer]||0)+x.amount;const sh=x.amount/x.among.length;x.among.forEach(m=>{b[m]=(b[m]||0)-sh})});return b}
 function settle(b){const d=[],c=[];Object.keys(b).forEach(m=>{if(b[m]<-0.5)d.push([m,-b[m]]);else if(b[m]>0.5)c.push([m,b[m]])});
   d.sort((a,z)=>z[1]-a[1]);c.sort((a,z)=>z[1]-a[1]);const out=[];let i=0,j=0;
   while(i<d.length&&j<c.length){const v=Math.min(d[i][1],c[j][1]);out.push([d[i][0],c[j][0],v]);d[i][1]-=v;c[j][1]-=v;if(d[i][1]<0.5)i++;if(c[j][1]<0.5)j++}return out}
+const owes=(e,id)=>Math.abs(balances(e)[id]||0)>=0.5;
+function contacts(e){const seen=new Map();S.events.forEach(x=>{if(x.id!==e.id)x.members.forEach(m=>{if(m.id!==meId()&&!e.members.some(y=>y.id===m.id))seen.set(m.id,m.name)})});return[...seen].map(([id,name])=>({id,name}))}
 
 // ===== Pantallas =====
 function topbar(title,sub,back,right){
@@ -264,77 +269,85 @@ function nav(){const tabs=[['inicio','Juntadas',I.home],['dispo','Mi disponibili
   return `<nav class="nav">${tabs.map(([k,l,ic])=>`<button data-act="go:${k}" ${cur===k?'aria-current="page"':''}>${ic}<span>${l}</span></button>`).join('')}</nav>`}
 const banner=()=>S.offline?`<div class="banner">No hay conexión con la Raspberry. Puede estar apagada o reiniciándose. Los cambios no se están guardando.</div>`:'';
 
-function scrBienvenida(){const known=Object.entries(store.groups);
+function scrBienvenida(){
   return topbar('Coordiná juntadas con tus amigas','Elegí cuándo, mandalo al calendario y dividí los gastos')+`<div class="body">
-  ${known.length?`<div class="card"><h3>Tus grupos</h3><div class="list">${known.map(([gid,g])=>`<button class="li opt" style="border:0;padding:11px 0;border-radius:0" data-act="open:${esc(gid)}"><span class="grow"><b>${esc(g.name||'Grupo')}</b></span>${I.back.replace('M15 18l-6-6 6-6','M9 18l6-6-6-6')}</button>`).join('')}</div></div>`:''}
-  <div class="card hi"><h3>Crear un grupo</h3>
-    <div class="field"><label for="n-group">Nombre del grupo</label><input id="n-group" maxlength="40" placeholder="Ej: Las de siempre" autocomplete="off"></div>
-    <div class="field"><label for="n-me">Tu nombre</label><input id="n-me" maxlength="30" placeholder="Como te conocen" autocomplete="given-name"></div>
-    <button class="btn block" data-act="creategroup">${I.plus} Crear grupo</button></div>
-  <p class="muted small">¿Te pasaron un link? Abrilo y vas a entrar directo a ese grupo.</p>
+  ${S.err?`<div class="card vote"><p>${esc(S.err)}</p></div>`:''}
+  <div class="card hi"><h3>Empezar</h3>
+    <div class="field"><label for="w-name">Tu nombre</label><input id="w-name" maxlength="30" placeholder="Como te conocen" autocomplete="given-name"></div>
+    <button class="btn block" data-act="start">Empezar</button>
+    <p class="muted small">No hace falta crear cuenta. Este celular queda recordado y te damos un link personal para entrar desde otro.</p></div>
+  <p class="muted small">¿Te invitaron a una juntada? Abrí el link que te pasaron. ¿Ya usabas Juntadas en otro celular? Abrí tu link personal.</p>
   </div>`}
 
-function scrUnirse(){const g=S.group;
-  return topbar(esc(g.name),'Te invitaron a este grupo')+`<div class="body">
-  ${g.members.length?`<div class="card"><h3>¿Quién sos?</h3><div class="chips">${g.members.map(m=>`<button class="chip" data-act="iam:${m.id}">${esc(m.name)}</button>`).join('')}</div>
-    <p class="muted small">Si ya entraste desde otro celular, tocá tu nombre.</p></div>`:''}
-  <div class="card hi"><h3>${g.members.length?'Soy nueva en el grupo':'Entrar al grupo'}</h3>
-    <div class="field"><label for="j-name">Tu nombre</label><input id="j-name" maxlength="30" placeholder="Como te conocen" autocomplete="given-name"></div>
-    <button class="btn block" data-act="join">Entrar</button></div>
+function scrInvitacion(){const x=S.invite;
+  return topbar('Te invitaron a una juntada')+banner()+`<div class="body">
+  <div class="card vote"><div class="lbl st-vote">Organiza ${esc(x.admin)}</div><div class="big">${esc(x.title)}</div>
+    <div class="muted">${rangeLbl(x)}${x.place?' · '+esc(x.place):''} · ${x.count} ${x.count===1?'persona':'personas'}</div></div>
+  ${store.token&&S.me?`<div class="card hi"><p>Vas a entrar como <b>${esc(S.me.name)}</b>.</p><button class="btn block" data-act="accept">Sumarme</button></div>`
+   :`<div class="card hi"><div class="field"><label for="i-name">Tu nombre</label><input id="i-name" maxlength="30" placeholder="Como te conocen" autocomplete="given-name"></div>
+     <button class="btn block" data-act="accept">Sumarme</button>
+     <p class="muted small">¿Ya usás Juntadas en otro celular? Abrí primero tu link personal acá y después esta invitación, así quedás como la misma persona.</p></div>`}
+  <button class="linkbtn" data-act="noinvite">Ahora no</button>
   </div>`}
 
-function scrInicio(){const g=S.group;
-  const evs=g.events.map(e=>{const b=best(e),c=e.confirmed;
+function scrInicio(){
+  const evs=S.events.map(e=>{const b=best(e),c=e.confirmed,r=respondedIds(e).length;
     return `<button class="card ${c?'ok':'vote'}" data-act="ev:${e.id}">
       <div class="row between"><h3>${esc(e.title)}</h3><span class="lbl ${c?'st-ok':'st-vote'}">${c?'Confirmada':'Votando'}</span></div>
-      <div class="muted">${c?dayLong(c.date)+' · '+t(c.from)+' a '+t(c.to):rangeLbl(e)+' · respondieron '+responded(e)+' de '+g.members.length}${e.place?' · '+esc(e.place):''}</div>
-      ${!c&&b.c>0?`<div class="row between"><div class="avs">${g.members.filter(m=>(e.avail[m.id]||[]).length).map(m=>av(m.id)).join('')}</div><span class="num muted small">Mejor: ${dayLbl(b.day)} · ${t(b.from)}</span></div>`:''}
+      <div class="muted">${c?dayLong(c.date)+' · '+t(c.from)+' a '+t(c.to):rangeLbl(e)+' · respondieron '+r+' de '+e.members.length}${e.place?' · '+esc(e.place):''}</div>
+      <div class="row between"><div class="avs">${e.members.map(m=>av(e,m.id)).join('')}</div>${!c&&b.c>0?`<span class="num muted small">Mejor: ${dayLbl(b.day)} · ${t(b.from)}</span>`:isAdmin(e)?'<span class="badge adm">Organizás</span>':''}</div>
     </button>`}).join('');
-  return topbar('Hola, ¿cuándo nos vemos?','',null,`<button class="iconbtn" data-act="sheet:menu" aria-label="Grupos y opciones">${I.menu}</button>`)+banner()+`<div class="body">
-  <div class="card hi"><div class="row between wrap"><div class="grow"><div class="lbl">Tu grupo</div><h3 style="font-size:1.5rem;line-height:1.1">${esc(g.name)}</h3></div><div class="avs">${g.members.map(m=>av(m.id)).join('')}</div></div>
-    <div class="btns"><button class="btn ghost" data-act="sheet:invite">${I.user} Invitar</button></div></div>
-  <div class="row between"><div class="lbl">Juntadas</div><button class="chip" data-act="newev">+ Nueva</button></div>
-  ${evs||`<div class="card"><p class="muted">Todavía no hay juntadas. Creá la primera con <b>+ Nueva</b>: elegís qué días podrían ser y cada una marca cuándo puede.</p></div>`}
+  return topbar('Hola, '+esc(S.me.name),'¿Cuándo nos vemos?',null,`<button class="iconbtn" data-act="sheet:menu" aria-label="Tu cuenta">${I.menu}</button>`)+banner()+`<div class="body">
+  <div class="row between"><div class="lbl">Tus juntadas</div><button class="chip" data-act="newev">+ Nueva</button></div>
+  ${evs||`<div class="card"><p class="muted">Todavía no tenés juntadas. Creá una con <b>+ Nueva</b> e invitá a quien quieras con el link. Cada una ve solo las juntadas a las que la invitaron.</p></div>`}
   </div>`+nav()}
 
 function heatBg(c,total){const p=total?c/total:0;return p<=.5?`color-mix(in oklab,var(--heat-mid) ${Math.round(p*200)}%,var(--heat-lo))`:`color-mix(in oklab,var(--heat-hi) ${Math.round((p-.5)*200)}%,var(--heat-mid))`}
-function grid(e,kind){const days=daysOf(e),total=members().length,sets=availSets(e),mine=sets[me()]||new Set();
+function grid(e,kind){const days=daysOf(e),total=e.members.length,sets=availSets(e),mine=sets[meId()]||new Set();
   let s=`<div class="gridwrap"><div class="grid ${kind}" style="--cols:${days.length}"><div class="gh"></div>`+days.map(d=>`<div class="gh">${wd(d)}<b>${dObj(d).getUTCDate()}</b></div>`).join('');
   hoursOf(e).forEach(h=>{s+=`<div class="gt">${h}</div>`;days.forEach(d=>{const k=key(d,h);
-    if(kind==='heat'){const c=who(e,sets,k).length;s+=`<button class="c${S.sel===k?' sel':''}${c===total&&total>1?' full':''}" data-act="cell:${k}" style="background:${heatBg(c,total)}" aria-label="${dayLbl(d)}, ${t(h)}: pueden ${c} de ${total}"></button>`}
+    if(kind==='heat'){const c=whoCan(e,sets,k).length;s+=`<button class="c${S.sel===k?' sel':''}${c===total&&total>1?' full':''}" data-act="cell:${k}" style="background:${heatBg(c,total)}" aria-label="${dayLbl(d)}, ${t(h)}: pueden ${c} de ${total}"></button>`}
     else s+=`<div class="c${mine.has(k)?' on':''}" data-cell="${k}" role="checkbox" aria-checked="${mine.has(k)}" aria-label="${dayLbl(d)}, ${t(h)}"></div>`})});
   return s+'</div></div>'}
 
 function scrEvento(){const e=ev();if(!e){S.screen='inicio';return scrInicio()}
-  const total=members().length,b=best(e),c=e.confirmed,sets=availSets(e);let info;
-  if(S.sel){const d=S.sel.slice(0,10),h=+S.sel.slice(11);const y=who(e,sets,S.sel),n=members().map(m=>m.id).filter(m=>!y.includes(m));
+  const total=e.members.length,b=best(e),c=e.confirmed,sets=availSets(e),resp=respondedIds(e),pend=e.members.filter(m=>!resp.includes(m.id)).map(m=>m.id),adm=isAdmin(e);
+  const admName=nameOf(e,e.adminId);
+  let info;
+  if(S.sel){const d=S.sel.slice(0,10),h=+S.sel.slice(11);const y=whoCan(e,sets,S.sel),n=resp.filter(m=>!y.includes(m));
+    const rowOf=(k,ids,empty)=>`<div class="whorow"><span class="k">${k}</span>${ids.map(id=>av(e,id)).join('')||`<span class="muted small">${empty}</span>`}</div>`;
     info=`<div class="row between"><b>${dayLbl(d)} · ${t(h)} a ${t(h+1)}</b><span class="num">${y.length}/${total}</span></div>
-    <div class="row wrap" style="gap:6px"><span class="muted" style="width:60px">Pueden</span>${y.map(av).join('')||'<span class="muted">nadie</span>'}</div>
-    ${n.length?`<div class="row wrap" style="gap:6px"><span class="muted" style="width:60px">No</span>${n.map(av).join('')}</div>`:''}`}
-  else info=`<span class="muted">Tocá un cuadrito para ver quién puede en ese horario.</span>`;
-  const org=e.createdBy?(e.createdBy===me()?'Organizás vos · ':'Organiza '+esc(nameOf(e.createdBy))+' · '):'';
-  const head=c?`<div class="lbl st-ok">Fecha confirmada</div><div class="big">${dayLong(c.date)} · ${t(c.from)}–${t(c.to)}</div><div class="muted">Agregala a tu calendario y avisale al grupo.</div>
-      <div class="btns"><button class="btn alt" data-act="sheet:cal">${I.cal} Agregar al calendario</button></div><button class="linkbtn" data-act="unconfirm">Volver a votar</button>`
-    :b.c>0?`<div class="lbl">Mejor momento</div><div class="big">${dayLbl(b.day)} · ${t(b.from)}–${t(b.to)}</div><div class="muted">Pueden ${b.c} de ${total}${b.c===total&&total>1?', ¡todas!':''} · respondieron ${responded(e)}</div>
-      <div class="btns"><button class="btn alt" data-act="sheet:confirm">${I.cal} Confirmar fecha</button></div>`
-    :`<div class="lbl">Todavía nadie marcó</div><p class="muted">Cargá tu disponibilidad y pasale el link al grupo para que cada una marque la suya.</p>`;
-  return topbar(esc(e.title),org+rangeLbl(e)+(e.place?' · '+esc(e.place):''),'inicio')+banner()+`<div class="body">
+    ${rowOf('Pueden',y,'nadie')}${n.length?rowOf('No pueden',n,''):''}${pend.length?rowOf('Sin responder',pend,''):''}`}
+  else info=`<span class="muted">Tocá un cuadrito para ver quién puede, quién no y quién todavía no respondió.</span>`;
+  const head=c?`<div class="lbl st-ok">Fecha confirmada</div><div class="big">${dayLong(c.date)} · ${t(c.from)}–${t(c.to)}</div><div class="muted">Agregala a tu calendario.</div>
+      <div class="btns"><button class="btn alt" data-act="sheet:cal">${I.cal} Agregar al calendario</button></div>${adm?'<button class="linkbtn" data-act="unconfirm">Volver a votar</button>':''}`
+    :b.c>0?`<div class="lbl">Mejor momento</div><div class="big">${dayLbl(b.day)} · ${t(b.from)}–${t(b.to)}</div><div class="muted">Pueden ${b.c} de ${total}${b.c===total&&total>1?', ¡todas!':''}</div>
+      ${adm?`<div class="btns"><button class="btn alt" data-act="sheet:confirm">${I.cal} Confirmar fecha</button></div>`:`<div class="muted small">Cuando estén todas, ${esc(admName)} confirma la fecha.</div>`}`
+    :`<div class="lbl">Todavía nadie marcó</div><p class="muted">Cargá tu disponibilidad${adm?' e invitá a la gente con el link':''}.</p>`;
+  const people=e.members.map(m=>{const id=m.id;return `<div class="li">${av(e,id)}<span class="grow"><b>${esc(nameOf(e,id))}</b></span>
+    ${id===e.adminId?'<span class="badge adm">Organiza</span>':''}${!resp.includes(id)?'<span class="badge pend">Sin responder</span>':''}
+    ${adm&&id!==e.adminId?`<button class="x" data-act="kick:${id}" aria-label="Sacar de la juntada">${I.x}</button>`:''}</div>`}).join('');
+  const kickMsg=S.arm&&S.arm.startsWith('kick:')?`<div class="warn">Tocá de nuevo la ✕ para sacar a ${esc(nameOf(e,S.arm.slice(5)))}.</div>`:'';
+  return topbar(esc(e.title),rangeLbl(e)+(e.place?' · '+esc(e.place):''),'inicio')+banner()+`<div class="body">
   <div class="card ${c?'ok':'hi'}">${head}</div>
-  <div class="card"><div class="row between"><h3>Disponibilidad del grupo</h3><span class="lbl">${total} personas</span></div>
+  <div class="card"><div class="row between"><h3>Disponibilidad</h3><span class="lbl">Respondieron ${resp.length} de ${total}</span></div>
     ${grid(e,'heat')}
-    <div class="legend"><span>0</span><i></i><span>${total}</span></div></div>
+    <div class="legend"><span>0</span><i></i><span>${total}</span></div>
+    ${pend.length?`<div class="muted small">Falta${pend.length>1?'n':''}: ${pend.map(id=>esc(nameOf(e,id))).join(', ')}. Mientras no respondan, cuentan como que no pueden.</div>`:''}</div>
   <div class="card">${info}</div>
   <div class="btns"><button class="btn" data-act="go:dispo">${I.hand} Cargar lo mío</button><button class="btn ghost" data-act="go:gastos">${I.money} Gastos</button></div>
-  <button class="btn danger block" data-act="delev">${S.delArm===e.id?'Tocá de nuevo para borrar la juntada':'Borrar juntada'}</button>
+  <div class="card"><div class="row between"><h3>Quiénes van</h3>${adm?`<button class="chip" data-act="sheet:invite">${'+ Invitar'}</button>`:''}</div><div class="list">${people}</div>${kickMsg}</div>
+  ${adm?`<button class="btn danger block" data-act="delev">${S.arm==='delev'?'Tocá de nuevo para borrar la juntada':'Borrar juntada'}</button>`
+       :`<button class="btn danger block" data-act="leave">${S.arm==='leave'?'Tocá de nuevo para salir':'Salir de la juntada'}</button>`}
   </div>`+nav()}
 
-function evPicker(){const es=S.group.events;if(es.length<2)return'';
-  return `<div class="field"><label for="ev-pick">Juntada</label><select id="ev-pick" data-change="pick">${es.map(e=>`<option value="${e.id}"${e.id===S.eid?' selected':''}>${esc(e.title)}</option>`).join('')}</select></div>`}
+function evPicker(){if(S.events.length<2)return'';
+  return `<div class="field"><label for="ev-pick">Juntada</label><select id="ev-pick" data-change="pick">${S.events.map(e=>`<option value="${e.id}"${e.id===S.eid?' selected':''}>${esc(e.title)}</option>`).join('')}</select></div>`}
 const noEvent=title=>topbar(title)+banner()+`<div class="body"><div class="card"><p class="muted">Primero hace falta una juntada.</p><button class="btn block" data-act="newev">${I.plus} Crear juntada</button></div></div>`+nav();
 
 function scrDispo(){const e=ev();if(!e)return noEvent('Mi disponibilidad');
-  const mine=new Set(e.avail[me()]||[]),r=myRuns(e,mine),days=daysOf(e),hs=hoursOf(e);
-  if(!days.includes(S.form.day))S.form={day:days[0],from:Math.max(e.hourFrom,Math.min(15,e.hourTo-1)),to:Math.min(e.hourTo,19)};
+  const mine=new Set(e.avail[meId()]||[]),r=myRuns(e,mine),days=daysOf(e),hs=hoursOf(e);
+  if(!days.includes(S.form.day))S.form={day:days[0],from:Math.max(e.hourFrom,Math.min(15,e.hourTo-1)),to:Math.min(e.hourTo,Math.max(19,e.hourFrom+1))};
   const sel=(id,opts,v)=>`<select id="${id}" data-f="${id}">${opts.map(([val,l])=>`<option value="${val}"${String(val)===String(v)?' selected':''}>${l}</option>`).join('')}</select>`;
   const presets=[['Mañana',10,13],['Tarde',14,19],['Noche',19,24],['Todo el día',e.hourFrom,e.hourTo]].map(([l,a,b])=>[l,Math.max(a,e.hourFrom),Math.min(b,e.hourTo)]).filter(([,a,b])=>a<b);
   const list=r.length?`<div class="list">${r.map(x=>`<div class="li"><span class="grow"><b>${dayLbl(x.day)}</b> <span class="num muted">· ${t(x.from)} a ${t(x.to)}</span></span><button class="x" data-act="delrun:${x.day}|${x.from}|${x.to}" aria-label="Borrar franja">${I.x}</button></div>`).join('')}</div>`:'<span class="muted">Todavía no marcaste horarios.</span>';
@@ -355,41 +368,50 @@ function scrDispo(){const e=ev();if(!e)return noEvent('Mi disponibilidad');
   </div>`+nav()}
 
 function scrGastos(){const e=ev();if(!e)return noEvent('Gastos');
-  const ms=members(),b=balances(e),tr=settle(b),tot=e.expenses.reduce((a,x)=>a+x.amount,0),mine=b[me()]||0;
-  if(!S.gf.payer||!ms.some(m=>m.id===S.gf.payer))S.gf.payer=me();
-  if(!S.gf.among)S.gf.among=new Set(ms.map(m=>m.id));
+  const ms=e.members,b=balances(e),tr=settle(b),gastos=e.expenses.filter(x=>x.kind!=='pago'),tot=gastos.reduce((a,x)=>a+x.amount,0),mine=b[meId()]||0,adm=isAdmin(e);
+  if(!S.gf||S.gf.eid!==e.id)S.gf={eid:e.id,desc:'',amt:'',payer:meId(),among:new Set(ms.map(m=>m.id))};
+  const all=S.gf.among.size===ms.length;
   const form=S.gOpen?`<div class="card hi"><div class="row between"><h3>Nuevo gasto</h3><button class="x" data-act="gclose" aria-label="Cerrar">${I.x}</button></div>
     <div class="field"><label for="g-desc">¿Qué se compró?</label><input id="g-desc" data-g="desc" maxlength="60" value="${esc(S.gf.desc)}" placeholder="Ej: pan y ensalada" autocomplete="off"></div>
     <div class="field"><label for="g-amt">Monto</label><input id="g-amt" data-g="amt" inputmode="decimal" value="${esc(S.gf.amt)}" placeholder="$ 0" autocomplete="off"></div>
-    <div class="field"><label>Pagó</label><div class="chips">${ms.map(m=>`<button class="chip" data-act="payer:${m.id}" aria-pressed="${S.gf.payer===m.id}">${esc(nameOf(m.id))}</button>`).join('')}</div></div>
-    <div class="field"><label>Se divide entre</label><div class="chips">${ms.map(m=>`<button class="chip" data-act="among:${m.id}" aria-pressed="${S.gf.among.has(m.id)}">${esc(nameOf(m.id))}</button>`).join('')}</div></div>
+    <div class="field"><label>Pagó</label><div class="chips">${ms.map(m=>`<button class="chip" data-act="payer:${m.id}" aria-pressed="${S.gf.payer===m.id}">${esc(nameOf(e,m.id))}</button>`).join('')}</div></div>
+    <div class="field"><div class="row between"><label>Se divide entre</label><button class="chip sm" data-act="amongall">${all?'Ninguna':'Todas'}</button></div>
+      <div class="chips">${ms.map(m=>`<button class="chip" data-act="among:${m.id}" aria-pressed="${S.gf.among.has(m.id)}">${esc(nameOf(e,m.id))}</button>`).join('')}</div>
+      <span class="muted small">${S.gf.among.size?`${money((parseAmt(S.gf.amt)||0)/S.gf.among.size)} cada una`:'Elegí al menos una'}</span></div>
     <button class="btn block" data-act="gsave"${S.busy?' disabled':''}>Guardar gasto</button></div>`
    :`<button class="btn block" data-act="gopen">${I.plus} Agregar gasto</button>`;
-  const amongLbl=x=>x.among.length===ms.length?'todas':x.among.map(nameOf).map(esc).join(', ');
+  const amongLbl=x=>x.among.length===ms.length&&x.among.every(id=>ms.some(m=>m.id===id))?'todas':x.among.map(id=>esc(nameOf(e,id))).join(', ');
+  const canDel=x=>x.by===meId()||adm;
+  const payRow=([f,to,v])=>{const k=f+'>'+to,can=f===meId()||to===meId()||adm;
+    return `<div class="li">${av(e,f)}<span class="grow"><b>${esc(nameOf(e,f))}</b> <span class="muted">le ${f===meId()?'pasás':'pasa'} a</span> <b>${esc(nameOf(e,to))}</b></span><b class="num">${money(v)}</b>
+    ${can?`<button class="chip sm" data-act="pay:${k}:${Math.round(v*100)/100}">${S.pay===k?'¿Ya se pagó? Tocá de nuevo':'Registrar pago'}</button>`:''}</div>`};
   return topbar('Gastos',esc(e.title))+banner()+`<div class="body">
   ${evPicker()}
   <div class="card hi"><div class="row between"><div><div class="lbl">Total</div><div class="big num">${money(tot)}</div></div>
    <div style="text-align:right"><div class="lbl">Tu saldo</div><div class="big num">${mine>=-0.5?'+':'−'}${money(Math.abs(mine)).slice(2)}</div></div></div>
-   <div class="muted small">${Math.abs(mine)<0.5?'Estás al día':mine>0?'Te deben '+money(mine):'Debés '+money(-mine)}${tot?' · '+money(tot/ms.length)+' por persona si se divide parejo':''}</div></div>
+   <div class="muted small">${Math.abs(mine)<0.5?'Estás al día':mine>0?'Te deben '+money(mine):'Debés '+money(-mine)}</div></div>
   ${form}
-  <div class="card"><h3>Quién le paga a quién</h3><div class="list">${tr.map(([f,to,v])=>`<div class="li">${av(f)}<span class="grow"><b>${esc(nameOf(f))}</b> <span class="muted">le ${f===me()?'pasás':'pasa'} a</span> <b>${esc(nameOf(to))}</b></span><b class="num">${money(v)}</b></div>`).join('')||'<span class="muted">Están todas al día.</span>'}</div></div>
-  <div class="card"><h3>Gastos cargados</h3><div class="list">${e.expenses.slice().reverse().map(x=>`<div class="li">${av(x.payer)}<span class="grow"><b>${esc(x.desc)}</b><br><small class="muted">Pagó ${esc(nameOf(x.payer))} · entre ${amongLbl(x)}</small></span><b class="num">${money(x.amount)}</b><button class="x" data-act="gdel:${x.id}" aria-label="Borrar gasto">${I.x}</button></div>`).join('')||'<span class="muted">Todavía no hay gastos.</span>'}</div></div>
+  <div class="card"><h3>Quién le paga a quién</h3><div class="list">${tr.map(payRow).join('')||'<span class="muted">Están todas al día.</span>'}</div>
+    ${tr.length?'<span class="muted small">Cuando alguien paga, tocá "Registrar pago" para que quede saldado. Nadie puede salir de la juntada con cuentas pendientes.</span>':''}</div>
+  <div class="card"><h3>Movimientos</h3><div class="list">${e.expenses.slice().reverse().map(x=>x.kind==='pago'
+    ?`<div class="li">${av(e,x.payer)}<span class="grow"><b>${esc(nameOf(e,x.payer))}</b> <span class="muted">le pagó a</span> <b>${esc(nameOf(e,x.among[0]))}</b></span><b class="num">${money(x.amount)}</b>${canDel(x)?`<button class="x" data-act="gdel:${x.id}" aria-label="Borrar pago">${I.x}</button>`:''}</div>`
+    :`<div class="li">${av(e,x.payer)}<span class="grow"><b>${esc(x.desc)}</b><br><small class="muted">Pagó ${esc(nameOf(e,x.payer))} · entre ${amongLbl(x)}</small></span><b class="num">${money(x.amount)}</b>${canDel(x)?`<button class="x" data-act="gdel:${x.id}" aria-label="Borrar gasto">${I.x}</button>`:''}</div>`).join('')||'<span class="muted">Todavía no hay gastos.</span>'}</div></div>
   </div>`+nav()}
 
 function scrEstado(){
   if(S.status==='cargando')return `<div class="body"><div class="center" style="align-items:center"><div class="spin"></div><span class="muted">Conectando…</span></div></div>`;
   if(S.status==='sinapi')return topbar('No se puede conectar')+`<div class="body"><div class="card vote"><p>La app guarda los datos en una Raspberry y ahora no responde. Puede estar apagada, sin internet o reiniciándose.</p><p class="muted small">Si recién se reinició, esperá un minuto y probá de nuevo.</p><button class="btn block" data-act="retry">Probar de nuevo</button></div></div>`;
-  if(S.status==='nogrupo')return topbar('No encontramos ese grupo')+`<div class="body"><div class="card"><p>El link puede estar mal copiado o el grupo ya no existe.</p><button class="btn block" data-act="home">Ir al inicio</button></div></div>`;
   return topbar('Algo salió mal')+`<div class="body"><div class="card"><p>${esc(S.err||'')}</p><button class="btn block" data-act="retry">Probar de nuevo</button></div></div>`}
 
 // ===== Hojas (ventanas de abajo) =====
-function sheet(){if(!S.sheet)return'';let inner='';const g=S.group;
-  if(S.sheet==='invite'){const link=groupLink(S.gid);
-    inner=`<h3>Invitar a ${esc(g.name)}</h3><p class="muted">Compartí este link. Quien lo abra entra al grupo y puede marcar su disponibilidad.</p>
-    <div class="copybox"><span class="grow">${esc(link)}</span><button class="chip" data-act="copy">Copiar</button></div>
+function sheet(){if(!S.sheet)return'';let inner='';const e=ev();
+  if(S.sheet==='invite'&&e){const link=inviteLink(e),cs=contacts(e);
+    inner=`<h3>Invitar a ${esc(e.title)}</h3><p class="muted">Quien abra este link se suma a esta juntada (y solo a esta). Pasalo solo a quien quieras invitar.</p>
+    <div class="copybox"><span class="grow">${esc(link)}</span><button class="chip" data-act="copy:invite">Copiar</button></div>
     ${navigator.share?`<button class="opt" data-act="share"><span class="ic">${I.share}</span><span><b>Compartir</b><small>Elegí la app</small></span></button>`:''}
-    <a class="opt" href="https://wa.me/?text=${encodeURIComponent('¡Sumate al grupo "'+g.name+'" en Juntadas! '+link)}" target="_blank" rel="noopener"><span class="ic">W</span><span><b>Mandar por WhatsApp</b><small>Al chat del grupo</small></span></a>
-    <a class="opt" href="mailto:?subject=${encodeURIComponent('Sumate a '+g.name)}&body=${encodeURIComponent('Entrá a este link para coordinar: '+link)}"><span class="ic">@</span><span><b>Mandar por mail</b><small>A una o varias personas</small></span></a>`}
+    <a class="opt" href="https://wa.me/?text=${encodeURIComponent('¡Te invito a "'+e.title+'"! Entrá acá para marcar cuándo podés: '+link)}" target="_blank" rel="noopener"><span class="ic">W</span><span><b>Mandar por WhatsApp</b><small>Al chat que quieras</small></span></a>
+    ${cs.length?`<div class="lbl">Gente de tus otras juntadas</div><div class="chips">${cs.map(p=>`<button class="chip" data-act="addc:${p.id}">+ ${esc(p.name)}</button>`).join('')}</div>`:''}
+    <button class="linkbtn" data-act="resetinv">${S.arm==='resetinv'?'Tocá de nuevo: el link anterior va a dejar de funcionar':'Cambiar el link de invitación'}</button>`}
   if(S.sheet==='newev'){const f=S.nf;const hs=[];for(let h=0;h<=24;h++)hs.push(h);
     inner=`<h3>Nueva juntada</h3>
     <div class="field"><label for="e-title">¿Qué hacemos?</label><input id="e-title" data-n="title" maxlength="60" value="${esc(f.title)}" placeholder="Ej: Asado en lo de Caro" autocomplete="off"></div>
@@ -400,39 +422,40 @@ function sheet(){if(!S.sheet)return'';let inner='';const g=S.group;
     <div class="lbl">¿En qué horario?</div>
     <div class="fields2"><div class="field"><label for="e-hf">Desde</label><select id="e-hf" data-n="hourFrom">${hs.slice(0,24).map(h=>`<option value="${h}"${h==f.hourFrom?' selected':''}>${t(h)}</option>`).join('')}</select></div>
       <div class="field"><label for="e-ht">Hasta</label><select id="e-ht" data-n="hourTo">${hs.slice(1).map(h=>`<option value="${h}"${h==f.hourTo?' selected':''}>${h===24?'00:00 (medianoche)':t(h)}</option>`).join('')}</select></div></div>
+    <p class="muted small">Vos vas a organizar esta juntada: invitás a la gente, confirmás la fecha y podés sacar a alguien.</p>
     <button class="btn block" data-act="createev"${S.busy?' disabled':''}>Crear juntada</button>`}
-  if(S.sheet==='confirm'){const e=ev(),f=S.cf,hs=hoursOf(e);
-    inner=`<h3>Confirmar fecha</h3><p class="muted">Elegí el día y el horario. Después la podés agregar al calendario.</p>
+  if(S.sheet==='confirm'&&e){const f=S.cf,hs=hoursOf(e);
+    inner=`<h3>Confirmar fecha</h3><p class="muted">Elegí el día y el horario. Después cada una la puede agregar a su calendario.</p>
     <div class="fields"><div class="field"><label for="c-day">Día</label><select id="c-day" data-c="date">${daysOf(e).map(d=>`<option value="${d}"${d===f.date?' selected':''}>${dayLong(d)}</option>`).join('')}</select></div>
      <div class="field"><label for="c-from">Desde</label><select id="c-from" data-c="from">${hs.map(h=>`<option value="${h}"${h==f.from?' selected':''}>${t(h)}</option>`).join('')}</select></div>
      <div class="field"><label for="c-to">Hasta</label><select id="c-to" data-c="to">${hs.map(h=>`<option value="${h+1}"${h+1==f.to?' selected':''}>${t(h+1)}</option>`).join('')}</select></div></div>
     <button class="btn alt block" data-act="doconfirm"${S.busy?' disabled':''}>${I.cal} Confirmar</button>`}
-  if(S.sheet==='cal'){const e=ev(),c=e.confirmed;
+  if(S.sheet==='cal'&&e&&e.confirmed){const c=e.confirmed;
     inner=`<h3>Agregar al calendario</h3>
     <div class="card ok"><div class="lbl st-ok">${esc(e.title)}</div><div class="big">${dayLong(c.date)} · ${t(c.from)}–${t(c.to)}</div>${e.place?`<div class="muted">${esc(e.place)}</div>`:''}</div>
     <a class="opt" href="${gcalLink(e)}" target="_blank" rel="noopener"><span class="ic">G</span><span><b>Google Calendar</b><small>Abre el evento listo para guardar</small></span></a>
     <button class="opt" data-act="ics"><span class="ic">A</span><span><b>Apple Calendar</b><small>Archivo para iPhone y Mac</small></span></button>
     <a class="opt" href="${outlookLink(e)}" target="_blank" rel="noopener"><span class="ic">O</span><span><b>Outlook</b><small>Abre Outlook en la web</small></span></a>
     <button class="opt" data-act="ics"><span class="ic">.ics</span><span><b>Otro calendario</b><small>Descargar archivo .ics</small></span></button>
-    <a class="btn block" href="https://wa.me/?text=${encodeURIComponent('¡Quedó confirmada "'+e.title+'"! '+dayLong(c.date)+' de '+t(c.from)+' a '+t(c.to)+(e.place?' en '+e.place:'')+'. Agregala a tu calendario desde acá: '+groupLink(S.gid))}" target="_blank" rel="noopener">Avisar al grupo por WhatsApp</a>
-    <small class="muted" style="text-align:center">Cada una puede agregarla a su calendario desde la app.</small>`}
-  if(S.sheet==='menu'){const known=Object.entries(store.groups);
-    inner=`<h3>Tus grupos</h3><div class="list">${known.map(([gid,k])=>`<button class="li opt" style="border:0;border-radius:0;padding:11px 0" data-act="open:${esc(gid)}"><span class="grow"><b>${esc(k.name||'Grupo')}</b>${gid===S.gid?' <small class="muted">· estás acá</small>':''}</span></button>`).join('')}</div>
-    <button class="btn ghost block" data-act="home">${I.plus} Crear otro grupo</button>
-    <p class="muted small">Estás como <b>${esc(mem(me()).name)}</b> en este grupo.</p>
-    <button class="linkbtn" data-act="notme">No soy ${esc(mem(me()).name)}</button>`}
+    <a class="btn block" href="https://wa.me/?text=${encodeURIComponent('¡Quedó confirmada "'+e.title+'"! '+dayLong(c.date)+' de '+t(c.from)+' a '+t(c.to)+(e.place?' en '+e.place:'')+'. Agregala a tu calendario desde Juntadas.')}" target="_blank" rel="noopener">Avisar por WhatsApp</a>`}
+  if(S.sheet==='menu'||S.sheet==='welcome'){
+    inner=`<h3>${S.sheet==='welcome'?'¡Listo, '+esc(S.me.name)+'!':'Tu link personal'}</h3>
+    <p class="muted">Con este link entrás como <b>${esc(S.me.name)}</b> desde cualquier celular o compu. Guardalo (por ejemplo, mandátelo a vos misma por WhatsApp o mail).</p>
+    <div class="warn">No se lo pases a nadie: quien lo tenga puede entrar como vos.</div>
+    <div class="copybox"><span class="grow">${esc(personalLink())}</span><button class="chip" data-act="copy:personal">Copiar</button></div>
+    ${S.sheet==='menu'?`<div class="field"><label for="me-name">Tu nombre</label><input id="me-name" maxlength="30" value="${esc(S.me.name)}"></div><button class="btn ghost block" data-act="rename">Guardar nombre</button>`:`<button class="btn block" data-act="close">Entendido</button>`}`}
   return `<div class="sheet-bg" data-act="close"><div class="sheet" data-stop role="dialog" aria-modal="true"><div class="grab"></div>${inner}</div></div>`}
 
 // ===== Calendario =====
 function calTimes(e){const c=e.confirmed,d=c.date.replace(/-/g,'');
   const end=c.to===24?addDays(c.date,1).replace(/-/g,'')+'T000000':d+'T'+pad(c.to)+'0000';return{start:d+'T'+pad(c.from)+'0000',end}}
 function gcalLink(e){const {start,end}=calTimes(e);const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';
-  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(e.title)+'&dates='+start+'/'+end+(tz?'&ctz='+encodeURIComponent(tz):'')+(e.place?'&location='+encodeURIComponent(e.place):'')+'&details='+encodeURIComponent('Organizado con Juntadas: '+groupLink(S.gid))}
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(e.title)+'&dates='+start+'/'+end+(tz?'&ctz='+encodeURIComponent(tz):'')+(e.place?'&location='+encodeURIComponent(e.place):'')+'&details='+encodeURIComponent('Organizado con Juntadas')}
 function outlookLink(e){const c=e.confirmed;const s=c.date+'T'+pad(c.from)+':00:00';const en=(c.to===24?addDays(c.date,1)+'T00':c.date+'T'+pad(c.to))+':00:00';
-  return 'https://outlook.live.com/calendar/0/deeplink/compose?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&subject='+encodeURIComponent(e.title)+'&startdt='+s+'&enddt='+en+(e.place?'&location='+encodeURIComponent(e.place):'')+'&body='+encodeURIComponent('Organizado con Juntadas: '+groupLink(S.gid))}
+  return 'https://outlook.live.com/calendar/0/deeplink/compose?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&subject='+encodeURIComponent(e.title)+'&startdt='+s+'&enddt='+en+(e.place?'&location='+encodeURIComponent(e.place):'')+'&body='+encodeURIComponent('Organizado con Juntadas')}
 function icsText(e){const {start,end}=calTimes(e);const ie=s=>String(s).replace(/\\/g,'\\\\').replace(/[,;]/g,m=>'\\'+m).replace(/\n/g,'\\n');
   const stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
-  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Juntadas//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT','UID:'+e.id+'@juntadas','DTSTAMP:'+stamp,'DTSTART:'+start,'DTEND:'+end,'SUMMARY:'+ie(e.title),e.place?'LOCATION:'+ie(e.place):null,'DESCRIPTION:'+ie('Organizado con Juntadas: '+groupLink(S.gid)),'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n')+'\r\n'}
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Juntadas//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT','UID:'+e.id+'@juntadas','DTSTAMP:'+stamp,'DTSTART:'+start,'DTEND:'+end,'SUMMARY:'+ie(e.title),e.place?'LOCATION:'+ie(e.place):null,'DESCRIPTION:'+ie('Organizado con Juntadas'),'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n')+'\r\n'}
 function downloadIcs(e){const blob=new Blob([icsText(e)],{type:'text/calendar;charset=utf-8'});const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download=(e.title.replace(/[^\w\-áéíóúñü ]+/gi,'').trim()||'juntada')+'.ics';document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
@@ -442,81 +465,95 @@ let lastScreenKey='';
 function render(){
   const y=window.scrollY,sk=S.status+S.screen+S.eid;
   let html;
-  if(!S.gid&&S.status!=='cargando'&&S.status!=='sinapi')html=scrBienvenida();
-  else if(S.status!=='ok'&&S.status!=='unirse')html=scrEstado();
-  else if(S.status==='unirse')html=scrUnirse();
+  if(S.status==='bienvenida')html=scrBienvenida();
+  else if(S.status==='invitacion')html=scrInvitacion();
+  else if(S.status!=='ok')html=scrEstado();
   else html=({inicio:scrInicio,evento:scrEvento,dispo:scrDispo,gastos:scrGastos}[S.screen]||scrInicio)();
-  $app.innerHTML=html+sheet()+(S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:'');
+  $app.innerHTML=html+(S.status==='ok'?sheet():'')+(S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:'');
   if(sk===lastScreenKey)window.scrollTo(0,y);else window.scrollTo(0,0);
   lastScreenKey=sk;
-  document.title=S.group?(S.group.name+' · Juntadas'):'Juntadas'}
-let toastT;function toast(m){S.toast=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{S.toast=null;render()},2600)}
-async function run(fn){if(S.busy)return;S.busy=true;try{await fn()}catch(err){S.busy=false;toast(err.message);return}S.busy=false;render()}
+  const e=ev();document.title=S.status==='ok'&&S.screen!=='inicio'&&e?(e.title+' · Juntadas'):'Juntadas'}
+let toastT;function toast(m){S.toast=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{S.toast=null;render()},3200)}
+async function run(fn){if(S.busy)return;S.busy=true;try{await fn()}catch(err){S.busy=false;if(err instanceof AuthError){lostKey();render();return}toast(err.message);return}S.busy=false;render()}
 
 // ===== Disponibilidad: guardar =====
 let saveT=null,pendingMine=null;
-function setMine(e,set){e.avail[me()]=[...set].sort();pendingMine={eid:e.id,slots:[...set]};clearTimeout(saveT);saveT=setTimeout(flushMine,500)}
+function setMine(e,set){e.avail[meId()]=[...set].sort();pendingMine={eid:e.id,slots:[...set]};clearTimeout(saveT);saveT=setTimeout(flushMine,500)}
 async function flushMine(){if(!pendingMine)return;const p=pendingMine;pendingMine=null;
-  try{await api('PUT','/groups/'+S.gid+'/events/'+p.eid+'/avail/'+me(),{slots:p.slots});if(!busyUi())render()}catch(err){toast(err.message)}}
+  try{await api('PUT','/events/'+p.eid+'/avail',{slots:p.slots});if(!busyUi())render()}catch(err){toast(err.message)}}
+
+const parseAmt=s=>parseFloat(String(s).replace(/\$|\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));
 
 // ===== Acciones =====
 const val=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
-async function act(a,el){const[k,...rest]=a.split(':');const v=rest.join(':');
-  if(k!=='delev')S.delArm=null;
+async function copy(text,msg){try{await navigator.clipboard.writeText(text);toast(msg)}catch{toast('Mantené apretado el link para copiarlo')}}
+async function act(a){const[k,...rest]=a.split(':');const v=rest.join(':');
+  const armed=S.arm;if(!['delev','leave','kick','resetinv'].includes(k))S.arm=null;
+  if(k!=='pay')S.pay=null;
+  const e=ev();
   switch(k){
-  case'go':S.screen=v;S.sheet=null;S.sel=null;if(v==='gastos'){S.gOpen=false}break;
-  case'ev':S.eid=v;S.screen='evento';S.sel=null;break;
+  case'go':S.screen=v;S.sheet=null;S.sel=null;if(v==='gastos')S.gOpen=false;break;
+  case'ev':S.eid=v;S.screen='evento';S.sel=null;history.replaceState(null,'','#e='+v);break;
   case'sheet':S.sheet=v;
-    if(v==='confirm'){const e=ev(),b=best(e);let f={date:b.day,from:b.from,to:b.to};
-      if(S.sel){const d=S.sel.slice(0,10),h=+S.sel.slice(11),sets=availSets(e),c=who(e,sets,S.sel).length;let to=h+1;while(to<e.hourTo&&who(e,sets,key(d,to)).length===c)to++;f={date:d,from:h,to}}
+    if(v==='confirm'){const b=best(e);let f={date:b.day,from:b.from,to:b.to};
+      if(S.sel){const d=S.sel.slice(0,10),h=+S.sel.slice(11),sets=availSets(e),c=whoCan(e,sets,S.sel).length;let to=h+1;while(to<e.hourTo&&whoCan(e,sets,key(d,to)).length===c)to++;f={date:d,from:h,to}}
       S.cf=f}break;
   case'close':S.sheet=null;break;
   case'cell':S.sel=S.sel===v?null:v;break;
   case'mode':S.mode=v;break;
-  case'retry':S.status='cargando';render();return boot();
-  case'home':S.gid=null;S.group=null;S.sheet=null;S.status='ok';history.replaceState(null,'',location.pathname+location.search);break;
-  case'open':S.sheet=null;S.status='cargando';render();return openGroup(v);
-  case'creategroup':return run(async()=>{const name=val('n-group'),mine=val('n-me');if(!name||!mine)throw new Error('Completá el nombre del grupo y el tuyo');
-    const j=await api('POST','/groups',{name,memberName:mine});store.groups[j.group.id]={mid:j.memberId,name:j.group.name};saveStore();
-    S.gid=j.group.id;S.group=j.group;S.status='ok';S.screen='inicio';history.replaceState(null,'','#g='+S.gid);pickEvent();S.sheet='invite'});
-  case'iam':store.groups[S.gid]={mid:v,name:S.group.name};saveStore();S.status='ok';break;
-  case'join':return run(async()=>{const n=val('j-name');if(!n)throw new Error('Escribí tu nombre');
-    const j=await api('POST','/groups/'+S.gid+'/members',{name:n});store.groups[S.gid]={mid:j.memberId,name:S.group.name};saveStore();S.status='ok'});
-  case'notme':delete store.groups[S.gid].mid;saveStore();S.sheet=null;S.status='unirse';break;
-  case'newev':{const st=todayIso();S.nf={title:'',place:'',start:st,end:addDays(st,6),hourFrom:10,hourTo:24};S.sheet='newev';S.screen=S.screen==='evento'?'inicio':S.screen;break}
+  case'retry':return boot();
+  case'start':return run(async()=>{const n=val('w-name');if(!n)throw new Error('Escribí tu nombre');
+    const j=await api('POST','/me',{name:n});store.token=j.token;saveStore();S.err=null;S.status='ok';S.screen='inicio';S.sheet='welcome'});
+  case'accept':return run(async()=>{const inv=S.invite;let first=false;
+    if(!store.token){const n=val('i-name');if(!n)throw new Error('Escribí tu nombre');const j=await api('POST','/me',{name:n});store.token=j.token;saveStore();first=true}
+    const j=await api('POST','/join',{eventId:inv.id,code:inv.code});S.invite=null;S.status='ok';S.eid=j.eventId;S.screen='evento';
+    history.replaceState(null,'','#e='+j.eventId);if(first)S.sheet='welcome'});
+  case'noinvite':S.invite=null;history.replaceState(null,'',location.pathname+location.search);S.status=store.token?'ok':'bienvenida';S.screen='inicio';break;
+  case'rename':return run(async()=>{const n=val('me-name');if(!n)throw new Error('Escribí tu nombre');await api('PATCH','/me',{name:n});S.sheet=null;toast('Nombre guardado')});
+  case'newev':{const st=todayIso();S.nf={title:'',place:'',start:st,end:addDays(st,6),hourFrom:10,hourTo:24};S.sheet='newev';if(S.screen==='evento')S.screen='inicio';break}
   case'createev':return run(async()=>{const f=S.nf;if(!f.title.trim())throw new Error('Poné un nombre para la juntada');
     if(!f.start||!f.end)throw new Error('Elegí los días');if(+f.hourFrom>=+f.hourTo)throw new Error('El horario "hasta" tiene que ser después del "desde"');
-    const j=await api('POST','/groups/'+S.gid+'/events',{...f,hourFrom:+f.hourFrom,hourTo:+f.hourTo,createdBy:me()});
-    S.eid=j.eventId;S.sheet=null;S.screen='dispo'});
+    const j=await api('POST','/events',{...f,hourFrom:+f.hourFrom,hourTo:+f.hourTo});
+    S.eid=j.eventId;S.screen='evento';S.sheet='invite';history.replaceState(null,'','#e='+j.eventId)});
   case'doconfirm':return run(async()=>{const f=S.cf;if(+f.from>=+f.to)throw new Error('El horario "hasta" tiene que ser después del "desde"');
-    await api('PATCH','/groups/'+S.gid+'/events/'+S.eid,{confirmed:{date:f.date,from:+f.from,to:+f.to}});S.sheet='cal';S.sel=null});
-  case'unconfirm':return run(()=>api('PATCH','/groups/'+S.gid+'/events/'+S.eid,{confirmed:null}));
-  case'delev':if(S.delArm!==S.eid){S.delArm=S.eid;break}S.delArm=null;
-    return run(async()=>{await api('DELETE','/groups/'+S.gid+'/events/'+S.eid);pickEvent();S.screen='inicio'});
-  case'ics':downloadIcs(ev());return;
-  case'copy':try{await navigator.clipboard.writeText(groupLink(S.gid));toast('Link copiado')}catch{toast('Mantené apretado el link para copiarlo')}return;
-  case'share':try{await navigator.share({title:'Juntadas',text:'Sumate al grupo "'+S.group.name+'"',url:groupLink(S.gid)})}catch{}return;
+    await api('PATCH','/events/'+S.eid,{confirmed:{date:f.date,from:+f.from,to:+f.to}});S.sheet='cal';S.sel=null});
+  case'unconfirm':return run(()=>api('PATCH','/events/'+S.eid,{confirmed:null}));
+  case'delev':if(armed!=='delev'){S.arm='delev';break}S.arm=null;
+    return run(async()=>{await api('DELETE','/events/'+S.eid);S.screen='inicio';toast('Juntada borrada')});
+  case'leave':if(armed!=='leave'){S.arm='leave';break}S.arm=null;
+    return run(async()=>{await api('DELETE','/events/'+S.eid+'/members/'+meId());S.screen='inicio';toast('Saliste de la juntada')});
+  case'kick':if(armed!=='kick:'+v){S.arm='kick:'+v;break}S.arm=null;
+    return run(async()=>{const n=nameOf(e,v);await api('DELETE','/events/'+S.eid+'/members/'+v);toast(n+' ya no está en la juntada')});
+  case'addc':return run(async()=>{await api('POST','/events/'+S.eid+'/members',{personId:v});toast('Sumada')});
+  case'resetinv':if(armed!=='resetinv'){S.arm='resetinv';break}S.arm=null;
+    return run(async()=>{await api('POST','/events/'+S.eid+'/invite',{});toast('Link nuevo listo')});
+  case'ics':downloadIcs(e);return;
+  case'copy':return copy(v==='personal'?personalLink():inviteLink(e),'Link copiado');
+  case'share':try{await navigator.share({title:'Juntadas',text:'Te invito a "'+e.title+'"',url:inviteLink(e)})}catch{}return;
   case'preset':{const[a,b]=v.split('-');S.form.from=+a;S.form.to=+b;break}
-  case'addrange':{const e=ev(),f=S.form;if(+f.to<=+f.from){toast('El "hasta" tiene que ser después del "desde"');return}
-    const m=new Set(e.avail[me()]||[]);for(let h=+f.from;h<+f.to;h++)m.add(key(f.day,h));setMine(e,m);toast('Franja agregada');return}
-  case'delrun':{const e=ev(),[d,a,b]=v.split('|');const m=new Set(e.avail[me()]||[]);for(let h=+a;h<+b;h++)m.delete(key(d,h));setMine(e,m);break}
-  case'clear':{const e=ev();setMine(e,new Set());break}
-  case'gopen':S.gOpen=true;S.gf={desc:'',amt:'',payer:me(),among:new Set(members().map(m=>m.id))};break;
+  case'addrange':{const f=S.form;if(+f.to<=+f.from){toast('El "hasta" tiene que ser después del "desde"');return}
+    const m=new Set(e.avail[meId()]||[]);for(let h=+f.from;h<+f.to;h++)m.add(key(f.day,h));setMine(e,m);toast('Franja agregada');return}
+  case'delrun':{const[d,a,b]=v.split('|');const m=new Set(e.avail[meId()]||[]);for(let h=+a;h<+b;h++)m.delete(key(d,h));setMine(e,m);break}
+  case'clear':setMine(e,new Set());break;
+  case'gopen':S.gOpen=true;S.gf=null;break;
   case'gclose':S.gOpen=false;break;
   case'payer':S.gf.payer=v;break;
   case'among':S.gf.among.has(v)?S.gf.among.delete(v):S.gf.among.add(v);break;
-  case'gsave':return run(async()=>{const g=S.gf,amt=parseFloat(String(g.amt).replace(/\$|\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));
+  case'amongall':S.gf.among=S.gf.among.size===e.members.length?new Set():new Set(e.members.map(m=>m.id));break;
+  case'gsave':return run(async()=>{const g=S.gf,amt=parseAmt(g.amt);
     if(!g.desc.trim())throw new Error('Escribí qué se compró');if(!(amt>0))throw new Error('Poné un monto válido');if(!g.among.size)throw new Error('Elegí entre quiénes se divide');
-    await api('POST','/groups/'+S.gid+'/events/'+S.eid+'/expenses',{desc:g.desc,amount:amt,payer:g.payer,among:[...g.among]});S.gOpen=false;toast('Gasto guardado')});
-  case'gdel':return run(()=>api('DELETE','/groups/'+S.gid+'/events/'+S.eid+'/expenses/'+v));
+    await api('POST','/events/'+S.eid+'/expenses',{desc:g.desc,amount:amt,payer:g.payer,among:[...g.among]});S.gOpen=false;S.gf=null;toast('Gasto guardado')});
+  case'pay':{const[pair,amt]=[v.slice(0,v.lastIndexOf(':')),+v.slice(v.lastIndexOf(':')+1)];if(S.pay!==pair){S.pay=pair;break}S.pay=null;const[f,to]=pair.split('>');
+    return run(async()=>{await api('POST','/events/'+S.eid+'/expenses',{kind:'pago',amount:amt,payer:f,among:[to]});toast('Pago registrado')})}
+  case'gdel':return run(()=>api('DELETE','/events/'+S.eid+'/expenses/'+v));
   }
   render()}
 
 $app.addEventListener('click',ev_=>{const el=ev_.target.closest('[data-act],[data-stop]');if(!el)return;
   if(!el.hasAttribute('data-act'))return;
-  act(el.dataset.act,el)});
+  act(el.dataset.act)});
 $app.addEventListener('input',e_=>{const el=e_.target;
-  if(el.dataset.g)S.gf[el.dataset.g]=el.value;
+  if(el.dataset.g&&S.gf){S.gf[el.dataset.g]=el.value;if(el.dataset.g==='amt'){const sm=el.closest('.card').querySelector('.field:last-of-type .muted.small');if(sm&&S.gf.among.size)sm.textContent=money((parseAmt(el.value)||0)/S.gf.among.size)+' cada una'}}
   if(el.dataset.n&&S.nf){S.nf[el.dataset.n]=el.value;if(el.dataset.n==='start'&&S.nf.end<el.value)S.nf.end=el.value}});
 $app.addEventListener('change',e_=>{const el=e_.target;
   if(el.dataset.f){const k={'m-day':'day','m-from':'from','m-to':'to'}[el.dataset.f];S.form[k]=k==='day'?el.value:+el.value}
@@ -528,22 +565,36 @@ $app.addEventListener('change',e_=>{const el=e_.target;
 let dragging=false,paint=true,dragSet=null;
 function paintCell(c){if(!c||!c.dataset.cell)return;const k=c.dataset.cell;if(paint)dragSet.add(k);else dragSet.delete(k);c.classList.toggle('on',paint);c.setAttribute('aria-checked',paint)}
 $app.addEventListener('pointerdown',e_=>{const c=e_.target.closest('.grid.mine .c');if(!c)return;e_.preventDefault();
-  const e=ev();dragSet=new Set(e.avail[me()]||[]);dragging=true;paint=!dragSet.has(c.dataset.cell);paintCell(c)});
+  const e=ev();dragSet=new Set(e.avail[meId()]||[]);dragging=true;paint=!dragSet.has(c.dataset.cell);paintCell(c)});
 $app.addEventListener('pointermove',e_=>{if(!dragging)return;const c=document.elementFromPoint(e_.clientX,e_.clientY);if(c&&c.closest)paintCell(c.closest('.grid.mine .c'))});
 const endDrag=()=>{if(!dragging)return;dragging=false;const e=ev();if(e){setMine(e,dragSet);render()}};
 window.addEventListener('pointerup',endDrag);window.addEventListener('pointercancel',endDrag);
 
-window.addEventListener('hashchange',()=>{const g=gidFromUrl();if(g&&g!==S.gid){S.status='cargando';render();openGroup(g)}});
+window.addEventListener('hashchange',()=>{if(/^#(i|k)=/.test(location.hash))boot()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){flushMine();refresh()}else flushMine()});
 setInterval(()=>refresh(),POLL_MS);
 
+// ===== Arranque =====
 async function boot(){
-  S.status='cargando';render();
-  S.api=await findApi();
+  S.status='cargando';S.sheet=null;render();
+  if(!S.api)S.api=await findApi();
   if(!S.api){S.status='sinapi';render();return}
-  const g=gidFromUrl();
-  if(g)return openGroup(g);
-  S.status='ok';S.gid=null;render()}
+  const hash=location.hash;
+  let mk=hash.match(/^#k=([A-Za-z0-9]+)/);
+  if(mk){const prev=store.token;store.token=mk[1];
+    history.replaceState(null,'',location.pathname+location.search);
+    try{await api('GET','/me');saveStore();S.status='ok';S.screen='inicio';render();toast('Entraste como '+S.me.name);return}
+    catch(err){if(prev)store.token=prev;else delete store.token;saveStore();S.err=err instanceof AuthError?'Ese link personal no es válido.':err.message}}
+  if(store.token){try{await api('GET','/me')}catch(err){if(err instanceof AuthError)lostKey();else{S.status='error';S.err=err.message;render();return}}}
+  const mi=hash.match(/^#i=([A-Za-z0-9]+)\.([A-Za-z0-9]+)/);
+  if(mi){try{const j=await api('GET','/invite/'+mi[1]+'/'+mi[2]);
+      if(j.event.already){S.eid=j.event.id;S.screen='evento';S.status='ok';history.replaceState(null,'','#e='+j.event.id);render();return}
+      S.invite={...j.event,code:mi[2]};S.status='invitacion';render();return}
+    catch(err){S.err=err.message;history.replaceState(null,'',location.pathname+location.search)}}
+  if(!store.token||!S.me){S.status='bienvenida';render();return}
+  const me_=hash.match(/^#e=([A-Za-z0-9]+)/);
+  if(me_&&S.events.some(e=>e.id===me_[1])){S.eid=me_[1];S.screen='evento'}else S.screen='inicio';
+  S.status='ok';render();if(S.err){toast(S.err);S.err=null}}
 boot();
 </script>
 </body>
