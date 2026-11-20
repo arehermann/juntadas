@@ -126,6 +126,7 @@ p{margin:0;line-height:1.5}
 .badge{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-family:var(--num);white-space:nowrap}
 .badge.adm{border-color:var(--gr);color:var(--gr)}
 .badge.pend{border-color:var(--pk);color:var(--pk)}
+.chip.day[aria-pressed="false"]{text-decoration:line-through;color:var(--muted);border-color:var(--line)}
 .chip.sm{padding:5px 10px;font-size:.78rem}
 .av.gone{background:#3A4058!important;color:var(--ink)}
 .whorow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -158,13 +159,16 @@ const wd=iso=>fmtD(iso,{weekday:'short'});
 const dayLbl=iso=>wd(iso)+' '+dObj(iso).getUTCDate();
 const dayLong=iso=>dayLbl(iso)+' '+fmtD(iso,{month:'short'});
 const money=n=>'$ '+Math.round(n).toLocaleString('es-AR');
-const daysOf=e=>{const out=[];let d=e.start;while(d<=e.end&&out.length<32){out.push(d);d=addDays(d,1)}return out};
+const spanOf=(a,b)=>{const out=[];let d=a;while(d<=b&&out.length<32){out.push(d);d=addDays(d,1)}return out};
+const daysOf=e=>e.days&&e.days.length?e.days:spanOf(e.start,e.end);
 const hoursOf=e=>{const out=[];for(let h=e.hourFrom;h<e.hourTo;h++)out.push(h);return out};
 const key=(d,h)=>d+'T'+pad(h);
 function rangeLbl(e){const a=dObj(e.start),b=dObj(e.end);
   if(e.start===e.end)return dayLong(e.start);
   const sameM=a.getUTCMonth()===b.getUTCMonth();
-  return 'Del '+dayLbl(e.start)+(sameM?'':' '+fmtD(e.start,{month:'short'}))+' al '+dayLbl(e.end)+' '+fmtD(e.end,{month:'short'})}
+  const base='Del '+dayLbl(e.start)+(sameM?'':' '+fmtD(e.start,{month:'short'}))+' al '+dayLbl(e.end)+' '+fmtD(e.end,{month:'short'});
+  const ds=daysOf(e),miss=spanOf(e.start,e.end).filter(d=>!ds.includes(d));
+  return miss.length?(miss.length<=3?base+' (sin '+miss.map(dayLbl).join(', ')+')':ds.length+' días entre el '+dayLbl(e.start)+' y el '+dayLbl(e.end)+' '+fmtD(e.end,{month:'short'})):base}
 
 const I={
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
@@ -355,7 +359,7 @@ function scrEvento(){const e=ev();if(!e){S.screen='inicio';return scrInicio()}
     ${id===e.adminId?'<span class="badge adm">Organiza</span>':''}${!resp.includes(id)?'<span class="badge pend">Sin responder</span>':''}
     ${adm&&id!==e.adminId?`<button class="x" data-act="kick:${id}" aria-label="Sacar de la juntada">${I.x}</button>`:''}</div>`}).join('');
   const kickMsg=S.arm&&S.arm.startsWith('kick:')?`<div class="warn">Tocá de nuevo la ✕ para sacar a ${esc(nameOf(e,S.arm.slice(5)))}.</div>`:'';
-  return topbar(esc(e.title),rangeLbl(e)+(e.place?' · '+esc(e.place):''),'inicio')+banner()+`<div class="body">
+  return topbar(esc(e.title),rangeLbl(e)+(e.place?' · '+esc(e.place):''),'inicio',adm?`<button class="iconbtn" data-act="editev" aria-label="Editar juntada">${I.pen}</button>`:'')+banner()+`<div class="body">
   <div class="card ${c?'ok':'hi'}">${head}</div>
   <div class="card"><div class="row between"><h3>Disponibilidad</h3><span class="lbl">Respondieron ${resp.length} de ${total}</span></div>
     ${grid(e,'heat')}
@@ -440,17 +444,20 @@ function sheet(){if(!S.sheet)return'';let inner='';const e=ev();
     ${cs.length?`<div class="lbl">Gente de tus otras juntadas</div><div class="chips">${cs.map(p=>`<button class="chip" data-act="addc:${p.id}">+ ${esc(p.name)}</button>`).join('')}</div>`:''}
     <button class="linkbtn" data-act="resetinv">${S.arm==='resetinv'?'Tocá de nuevo: el link anterior va a dejar de funcionar':'Cambiar el link de invitación'}</button>`}
   if(S.sheet==='newev'){const f=S.nf;const hs=[];for(let h=0;h<=24;h++)hs.push(h);
-    inner=`<h3>Nueva juntada</h3>
+    const span=f.start&&f.end&&f.start<=f.end?spanOf(f.start,f.end):[];
+    inner=`<h3>${f.edit?'Editar juntada':'Nueva juntada'}</h3>
     <div class="field"><label for="e-title">¿Qué hacemos?</label><input id="e-title" data-n="title" maxlength="60" value="${esc(f.title)}" placeholder="Ej: Asado en lo de Caro" autocomplete="off"></div>
     <div class="field"><label for="e-place">¿Dónde? (opcional)</label><input id="e-place" data-n="place" maxlength="80" value="${esc(f.place)}" placeholder="Ej: Casa de Caro" autocomplete="off"></div>
     <div class="lbl">¿Qué días podría ser?</div>
     <div class="fields2"><div class="field"><label for="e-start">Desde</label><input type="date" id="e-start" data-n="start" value="${f.start}"></div>
       <div class="field"><label for="e-end">Hasta</label><input type="date" id="e-end" data-n="end" value="${f.end}"></div></div>
+    ${span.length>1&&span.length<=31?`<div class="field"><label>Tocá un día para sacarlo</label><div class="chips">${span.map(d=>`<button class="chip day" data-act="dayoff:${d}" aria-pressed="${!f.off.has(d)}">${dayLbl(d)}</button>`).join('')}</div>
+      <span class="muted small">${f.off.size?`Quedan ${span.length-f.off.size} de ${span.length} días.`:'Están todos los días del rango.'}</span></div>`:''}
     <div class="lbl">¿En qué horario?</div>
     <div class="fields2"><div class="field"><label for="e-hf">Desde</label><select id="e-hf" data-n="hourFrom">${hs.slice(0,24).map(h=>`<option value="${h}"${h==f.hourFrom?' selected':''}>${t(h)}</option>`).join('')}</select></div>
       <div class="field"><label for="e-ht">Hasta</label><select id="e-ht" data-n="hourTo">${hs.slice(1).map(h=>`<option value="${h}"${h==f.hourTo?' selected':''}>${h===24?'00:00 (medianoche)':t(h)}</option>`).join('')}</select></div></div>
-    <p class="muted small">Vos vas a organizar esta juntada: invitás a la gente, confirmás la fecha y podés sacar a alguien.</p>
-    <button class="btn block" data-act="createev"${S.busy?' disabled':''}>Crear juntada</button>`}
+    ${f.edit?'<p class="muted small">Si sacás un día o acortás el horario, se borran los horarios que marcaron ahí.</p>':'<p class="muted small">Vos vas a organizar esta juntada: invitás a la gente, confirmás la fecha y podés sacar a alguien.</p>'}
+    <button class="btn block" data-act="${f.edit?'saveev':'createev'}"${S.busy?' disabled':''}>${f.edit?'Guardar cambios':'Crear juntada'}</button>`}
   if(S.sheet==='confirm'&&e){const f=S.cf,hs=hoursOf(e);
     inner=`<h3>Confirmar fecha</h3><p class="muted">Elegí el día y el horario. Después cada una la puede agregar a su calendario.</p>
     <div class="fields"><div class="field"><label for="c-day">Día</label><select id="c-day" data-c="date">${daysOf(e).map(d=>`<option value="${d}"${d===f.date?' selected':''}>${dayLong(d)}</option>`).join('')}</select></div>
@@ -521,6 +528,7 @@ function setMine(e,set){e.avail[meId()]=[...set].sort();pendingMine={eid:e.id,sl
 async function flushMine(){if(!pendingMine)return;const p=pendingMine;pendingMine=null;
   try{await api('PUT','/events/'+p.eid+'/avail',{slots:p.slots});if(!busyUi())render()}catch(err){toast(err.message)}}
 
+const pickedDays=f=>f.start&&f.end&&f.start<=f.end?spanOf(f.start,f.end).filter(d=>!f.off.has(d)):[];
 const parseAmt=s=>parseFloat(String(s).replace(/\$|\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));
 
 // ===== Acciones =====
@@ -555,11 +563,18 @@ async function act(a){const[k,...rest]=a.split(':');const v=rest.join(':');
     history.replaceState(null,'','#e='+j.eventId);if(first)S.sheet='welcome'});
   case'noinvite':S.invite=null;history.replaceState(null,'',location.pathname+location.search);S.status=store.token?'ok':'bienvenida';S.screen='inicio';break;
   case'rename':return run(async()=>{const n=val('me-name');if(!n)throw new Error('Escribí tu nombre');await api('PATCH','/me',{name:n});S.sheet=null;toast('Nombre guardado')});
-  case'newev':{const st=todayIso();S.nf={title:'',place:'',start:st,end:addDays(st,6),hourFrom:10,hourTo:24};S.sheet='newev';if(S.screen==='evento')S.screen='inicio';break}
+  case'newev':{const st=todayIso();S.nf={title:'',place:'',start:st,end:addDays(st,6),hourFrom:10,hourTo:24,off:new Set()};S.sheet='newev';if(S.screen==='evento')S.screen='inicio';break}
   case'createev':return run(async()=>{const f=S.nf;if(!f.title.trim())throw new Error('Poné un nombre para la juntada');
     if(!f.start||!f.end)throw new Error('Elegí los días');if(+f.hourFrom>=+f.hourTo)throw new Error('El horario "hasta" tiene que ser después del "desde"');
-    const j=await api('POST','/events',{...f,hourFrom:+f.hourFrom,hourTo:+f.hourTo});
+    const days=pickedDays(f);if(!days.length)throw new Error('Dejá al menos un día');
+    const j=await api('POST','/events',{title:f.title,place:f.place,days,start:days[0],end:days[days.length-1],hourFrom:+f.hourFrom,hourTo:+f.hourTo});
     S.eid=j.eventId;S.screen='evento';S.sheet='invite';history.replaceState(null,'','#e='+j.eventId)});
+  case'editev':S.nf={edit:true,title:e.title,place:e.place||'',start:e.start,end:e.end,hourFrom:e.hourFrom,hourTo:e.hourTo,off:new Set(spanOf(e.start,e.end).filter(d=>!daysOf(e).includes(d)))};S.sheet='newev';break;
+  case'saveev':return run(async()=>{const f=S.nf;if(!f.title.trim())throw new Error('Poné un nombre para la juntada');
+    if(+f.hourFrom>=+f.hourTo)throw new Error('El horario "hasta" tiene que ser después del "desde"');
+    const days=pickedDays(f);if(!days.length)throw new Error('Dejá al menos un día');
+    await api('PATCH','/events/'+S.eid,{title:f.title,place:f.place,days,start:days[0],end:days[days.length-1],hourFrom:+f.hourFrom,hourTo:+f.hourTo});S.sheet=null;S.sel=null;toast('Cambios guardados')});
+  case'dayoff':S.nf.off.has(v)?S.nf.off.delete(v):S.nf.off.add(v);break;
   case'doconfirm':return run(async()=>{const f=S.cf;if(+f.from>=+f.to)throw new Error('El horario "hasta" tiene que ser después del "desde"');
     await api('PATCH','/events/'+S.eid,{confirmed:{date:f.date,from:+f.from,to:+f.to}});S.sheet='cal';S.sel=null});
   case'unconfirm':return run(()=>api('PATCH','/events/'+S.eid,{confirmed:null}));
@@ -603,7 +618,7 @@ $app.addEventListener('input',e_=>{const el=e_.target;
 $app.addEventListener('change',e_=>{const el=e_.target;
   if(el.dataset.f){const k={'m-day':'day','m-from':'from','m-to':'to'}[el.dataset.f];S.form[k]=k==='day'?el.value:+el.value}
   if(el.dataset.c&&S.cf)S.cf[el.dataset.c]=el.dataset.c==='date'?el.value:+el.value;
-  if(el.dataset.n&&S.nf){S.nf[el.dataset.n]=el.value;if(el.dataset.n==='start'){const end=document.getElementById('e-end');if(end&&end.value<el.value){end.value=el.value;S.nf.end=el.value}}}
+  if(el.dataset.n&&S.nf){S.nf[el.dataset.n]=el.value;if(el.dataset.n==='start'&&S.nf.end<el.value)S.nf.end=el.value;if(el.dataset.n==='start'||el.dataset.n==='end')render()}
   if(el.dataset.change==='pick'){S.eid=el.value;S.sel=null;render()}});
 
 // Arrastrar sobre la grilla propia
